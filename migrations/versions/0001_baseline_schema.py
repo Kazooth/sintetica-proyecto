@@ -18,8 +18,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """This is the baseline migration — no schema changes, just marking the DB."""
-    pass
+    # Crear todas las tablas del modelo
+    from app.models import Base
+    bind = op.get_bind()
+    Base.metadata.create_all(bind)
 
 
 def downgrade() -> None:

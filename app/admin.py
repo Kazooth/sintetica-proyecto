@@ -76,8 +76,10 @@ class CityAdmin(ModelView, model=City):
     column_list = [City.id, City.name, City.state_id]
 
 class UserAdmin(ModelView, model=User):
-    column_list = [User.id, User.email, User.first_name, User.last_name]
-    column_searchable_list = [User.email, User.first_name, User.last_name]
+    # first_name/last_name are convenience @property on User that delegate to Person.
+    # sqladmin expects column-like descriptors or string names; use strings so it resolves at runtime.
+    column_list = [User.id, User.email, 'first_name', 'last_name']
+    column_searchable_list = ['email', 'first_name', 'last_name']
     
 class ProductAdmin(ModelView, model=Product):
     column_list = [Product.id, Product.establishment_id, Product.name, Product.price, Product.tax_rate, Product.is_active]

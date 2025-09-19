@@ -10,7 +10,7 @@ def upgrade():
     DO $$
     DECLARE est_id INT; r5a INT; r5b INT; r8 INT;
             u1 INT; u2 INT; u3 INT; u4 INT; u5 INT;
-            start_ts timestamptz; end_ts timestamptz;
+            pl_start_ts timestamptz; pl_end_ts timestamptz;
     BEGIN
       SELECT id INTO est_id FROM establishments WHERE name='Canchas Sintéticas La Nariño';
       SELECT id INTO r5a FROM resources WHERE establishment_id=est_id AND name='Cancha 5v5 - A';
@@ -24,27 +24,28 @@ def upgrade():
       SELECT id INTO u5 FROM users WHERE email='cliente5@lanarino.local';
 
       -- Reserva hoy +1 día 19:00–20:00 en 5v5 A (Camilo)
-      start_ts := date_trunc('day', now() + interval '1 day') + interval '19 hours';
-      end_ts   := start_ts + interval '1 hour';
-      IF NOT EXISTS (SELECT 1 FROM reservations WHERE resource_id=r5a AND tstzrange(start_ts,end_ts,'[)') && time_range) THEN
+      pl_start_ts := date_trunc('day', now() + interval '1 day') + interval '19 hours';
+      pl_end_ts   := pl_start_ts + interval '1 hour';
+      IF NOT EXISTS (SELECT 1 FROM reservations res WHERE res.resource_id=r5a AND tstzrange(res.start_ts,res.end_ts,'[)') && tstzrange(pl_start_ts,pl_end_ts,'[)')) THEN
         INSERT INTO reservations (resource_id, user_id, start_ts, end_ts, status, total_price, channel, notes)
-        VALUES (r5a, u1, start_ts, end_ts, 'CONFIRMED', 80000, 'WEB', 'Liga amigos');
+        VALUES (r5a, u1, pl_start_ts, pl_end_ts, 'CONFIRMED', 80000, 'WEB', 'Liga amigos');
       END IF;
 
       -- Reserva hoy +2 días 20:00–21:00 en 5v5 B (Laura)
-      start_ts := date_trunc('day', now() + interval '2 day') + interval '20 hours';
-      end_ts   := start_ts + interval '1 hour';
-      IF NOT EXISTS (SELECT 1 FROM reservations WHERE resource_id=r5b AND tstzrange(start_ts,end_ts,'[)') && time_range) THEN
+      pl_start_ts := date_trunc('day', now() + interval '2 day') + interval '20 hours';
+      pl_end_ts   := pl_start_ts + interval '1 hour';
+      IF NOT EXISTS (SELECT 1 FROM reservations res WHERE res.resource_id=r5b AND tstzrange(res.start_ts,res.end_ts,'[)') && tstzrange(pl_start_ts,pl_end_ts,'[)')) THEN
         INSERT INTO reservations (resource_id, user_id, start_ts, end_ts, status, total_price, channel, notes)
-        VALUES (r5b, u2, start_ts, end_ts, 'CONFIRMED', 80000, 'WEB', 'Equipo barrio');
+        VALUES (r5b, u2, pl_start_ts, pl_end_ts, 'CONFIRMED', 80000, 'WEB', 'Equipo barrio');
       END IF;
 
       -- Reserva hoy +3 días 18:00–19:00 en 8v8 (Julián)
-      start_ts := date_trunc('day', now() + interval '3 day') + interval '18 hours';
-      end_ts   := start_ts + interval '1 hour';
-      IF NOT EXISTS (SELECT 1 FROM reservations WHERE resource_id=r8 AND tstzrange(start_ts,end_ts,'[)') && time_range) THEN
+      pl_start_ts := date_trunc('day', now() + interval '3 day') + interval '18 hours';
+      pl_end_ts   := pl_start_ts + interval '1 hour';
+      IF NOT EXISTS (SELECT 1 FROM reservations res WHERE res.resource_id=r8 AND tstzrange(res.start_ts,res.end_ts,'[)') && tstzrange(pl_start_ts,pl_end_ts,'[)')) THEN
         INSERT INTO reservations (resource_id, user_id, start_ts, end_ts, status, total_price, channel, notes)
-        VALUES (r8, u3, start_ts, end_ts, 'CONFIRMED', 180000, 'PHONE', 'Partido universidad');
+        VALUES (r8, u3, pl_start_ts, pl_end_ts, 'CONFIRMED', 180000, 'PHONE', 'Partido universidad');
       END IF;
-    END$$;
+    END;
+    $$;
     """)

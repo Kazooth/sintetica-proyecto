@@ -25,8 +25,8 @@ def upgrade():
 
       -- Venta asociada a esa reserva
       IF NOT EXISTS (SELECT 1 FROM sales s WHERE s.reservation_id = res_id) THEN
-        INSERT INTO sales (establishment_id, cashier_user_id, reservation_id, payment_method, subtotal, tax_total, grand_total, status)
-        VALUES (est_id, cajero, res_id, 'EFECTIVO', 0, 0, 0, 'OK') RETURNING id INTO sale_id;
+  INSERT INTO sales (establishment_id, cashier_user_id, reservation_id, payment_method, subtotal, tax_total, grand_total, status, created_at)
+  VALUES (est_id, cajero, res_id, 'EFECTIVO', 0, 0, 0, 'OK', NOW()) RETURNING id INTO sale_id;
 
         INSERT INTO sale_items (sale_id, product_id, qty, unit_price, tax_rate, line_total)
         SELECT sale_id, agua, 3, p.price, p.tax_rate, 3*p.price FROM products p WHERE p.id=agua;
@@ -36,16 +36,16 @@ def upgrade():
         SELECT sale_id, gaseosa, 2, p.price, p.tax_rate, 2*p.price FROM products p WHERE p.id=gaseosa;
 
         UPDATE sales
-        SET subtotal = (SELECT COALESCE(SUM(line_total),0) FROM sale_items WHERE sale_id=sales.id),
+        SET subtotal = (SELECT COALESCE(SUM(line_total),0) FROM sale_items WHERE sale_items.sale_id=sales.id),
             tax_total=0,
-            grand_total = (SELECT COALESCE(SUM(line_total),0) FROM sale_items WHERE sale_id=sales.id)
-        WHERE id = sale_id;
+            grand_total = (SELECT COALESCE(SUM(line_total),0) FROM sale_items WHERE sale_items.sale_id=sales.id)
+        WHERE sales.id = sale_id;
       END IF;
 
       -- Venta libre (sin reserva)
       sale_id := NULL;
-      INSERT INTO sales (establishment_id, cashier_user_id, reservation_id, payment_method, subtotal, tax_total, grand_total, status)
-      VALUES (est_id, cajero, NULL, 'TRANSFERENCIA', 0, 0, 0, 'OK') RETURNING id INTO sale_id;
+  INSERT INTO sales (establishment_id, cashier_user_id, reservation_id, payment_method, subtotal, tax_total, grand_total, status, created_at)
+  VALUES (est_id, cajero, NULL, 'TRANSFERENCIA', 0, 0, 0, 'OK', NOW()) RETURNING id INTO sale_id;
 
       INSERT INTO sale_items (sale_id, product_id, qty, unit_price, tax_rate, line_total)
       SELECT sale_id, gatorade, 2, p.price, p.tax_rate, 2*p.price FROM products p WHERE p.id=gatorade;
@@ -53,9 +53,9 @@ def upgrade():
       SELECT sale_id, choco, 1, p.price, p.tax_rate, 1*p.price FROM products p WHERE p.id=choco;
 
       UPDATE sales
-      SET subtotal = (SELECT COALESCE(SUM(line_total),0) FROM sale_items WHERE sale_id=sales.id),
+      SET subtotal = (SELECT COALESCE(SUM(line_total),0) FROM sale_items WHERE sale_items.sale_id=sales.id),
           tax_total=0,
-          grand_total = (SELECT COALESCE(SUM(line_total),0) FROM sale_items WHERE sale_id=sales.id)
-      WHERE id = sale_id;
+          grand_total = (SELECT COALESCE(SUM(line_total),0) FROM sale_items WHERE sale_items.sale_id=sales.id)
+      WHERE sales.id = sale_id;
     END$$;
     """)

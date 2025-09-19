@@ -1,22 +1,41 @@
+
 # backend/app/models.py
 from datetime import datetime, date, time
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+import sqlalchemy as sa
 from sqlalchemy import (
     String, Boolean, ForeignKey, Numeric, Text,
     DateTime, Time, Date
 )
 # Si más adelante quieres reflejar UNIQUE/INDEX del SQL, puedes añadir UniqueConstraint/Index.
 
-
 class Base(DeclarativeBase):
     pass
+
+
+class Person(Base):
+    __tablename__ = "persons"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    first_name: Mapped[str] = mapped_column(String(80))
+    last_name: Mapped[str] = mapped_column(String(80))
+    document_number: Mapped[str | None] = mapped_column(String(40))
+    phone: Mapped[str | None] = mapped_column(String(40))
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    
+    # index hint: email is often searched
+    # make email indexed and unique at DB level
+    __table_args__ = (sa.Index('ix_persons_email', 'email'), sa.UniqueConstraint('email', name='uq_persons_email'))
+
+
+# (no duplicate Base)
 
 
 # --- Ubicación ---
 class State(Base):
     __tablename__ = "states"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(120))
+    name: Mapped[str] = mapped_column(String(120), unique=True)
 
 
 class City(Base):
@@ -24,24 +43,36 @@ class City(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
     state_id: Mapped[int] = mapped_column(ForeignKey("states.id"))
+    __table_args__ = (sa.UniqueConstraint('name', 'state_id', name='uq_city_name_state'),)
 
 
 # --- Seguridad / Personas ---
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True)
-    email: Mapped[str] = mapped_column(String(255))  # en SQL tiene UNIQUE
+    email: Mapped[str] = mapped_column(String(255), unique=True)
     password_hash: Mapped[str] = mapped_column(String(255))
-    first_name: Mapped[str] = mapped_column(String(80))
-    last_name: Mapped[str] = mapped_column(String(80))
+    person_id: Mapped[int] = mapped_column(ForeignKey("persons.id"))
+    # relationship to Person for easy access
+    from sqlalchemy.orm import relationship
+    person: Mapped["Person"] = relationship("Person", lazy="joined")
     # valores: ADMIN/OWNER/STAFF/CUSTOMER (tu SQL lo fija con CHECK y default)
     role: Mapped[str] = mapped_column(String(20))
+
+    # convenience properties so existing code can keep using user.first_name / last_name
+    @property
+    def first_name(self) -> str | None:
+        return getattr(self.person, 'first_name', None)
+
+    @property
+    def last_name(self) -> str | None:
+        return getattr(self.person, 'last_name', None)
 
 
 class Role(Base):
     __tablename__ = "roles"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(80))
+    name: Mapped[str] = mapped_column(String(80), unique=True)
     description: Mapped[str | None] = mapped_column(Text())
 
 
@@ -71,6 +102,7 @@ class Establishment(Base):
     city_id: Mapped[int] = mapped_column(ForeignKey("cities.id"))
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     name: Mapped[str] = mapped_column(String(160))
+    __table_args__ = (sa.UniqueConstraint('name', 'city_id', name='uq_establishment_name_city'),)
     phone: Mapped[str | None] = mapped_column(String(40))
     address: Mapped[str | None] = mapped_column(String(200))
 
@@ -92,6 +124,7 @@ class Resource(Base):
     price_per_slot: Mapped[int | None]
     currency: Mapped[str | None] = mapped_column(String(8))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    __table_args__ = (sa.UniqueConstraint('establishment_id', 'name', name='uq_resource_est_name'),)
 
 
 class OpeningHour(Base):
@@ -101,6 +134,7 @@ class OpeningHour(Base):
     weekday: Mapped[int]
     open_time: Mapped[time]  # TIME en SQL
     close_time: Mapped[time]
+    __table_args__ = (sa.UniqueConstraint('establishment_id', 'weekday', name='uq_opening_est_weekday'),)
 
 
 class Blackout(Base):
@@ -174,7 +208,7 @@ class Event(Base):
 class ProductCategory(Base):
     __tablename__ = "product_categories"
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(120))
+    name: Mapped[str] = mapped_column(String(120), unique=True)
 
 
 class Product(Base):
@@ -188,6 +222,7 @@ class Product(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     # sku nuevo (nullable + unique)
     sku: Mapped[str | None] = mapped_column(String(40), unique=True, nullable=True)
+    __table_args__ = (sa.UniqueConstraint('establishment_id', 'name', name='uq_product_est_name'),)
 
 
 class InventoryStock(Base):

@@ -15,11 +15,17 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     exists = db.query(User).filter(User.email == payload.email).first()
     if exists:
         raise HTTPException(status_code=409, detail="Email already registered")
+    # Create Person record first
+    from ..models import Person
+    person = Person(first_name=payload.first_name, last_name=payload.last_name, email=payload.email)
+    db.add(person)
+    db.flush()  # get person.id
+
     user = User(
         email=payload.email,
         password_hash=hash_password(payload.password),
-        first_name=payload.first_name,
-        last_name=payload.last_name,
+        person_id=person.id,
+        role="CUSTOMER",
     )
     db.add(user)
     db.commit()
