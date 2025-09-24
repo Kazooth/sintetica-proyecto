@@ -8,15 +8,17 @@ from ..security import get_current_user
 
 router = APIRouter()
 
+
 # GET: productos activos por establecimiento
 @router.get("", response_model=list[ProductOut])
 def list_products(establishment_id: int, db: Session = Depends(get_db)):
     return (
         db.query(Product)
-        .filter(Product.establishment_id == establishment_id, Product.is_active == True)
+        .filter(Product.establishment_id == establishment_id, Product.is_active)
         .order_by(Product.name)
         .all()
     )
+
 
 # POST: desactivar (soft delete)
 @router.post("/{product_id}/deactivate", status_code=200)
@@ -32,6 +34,7 @@ def deactivate_product(
     db.add(p)
     db.commit()
     return {"ok": True, "is_active": p.is_active}
+
 
 # DELETE: borrar (hard delete)
 @router.delete("/{product_id}", status_code=204)

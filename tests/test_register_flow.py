@@ -1,11 +1,8 @@
-import os
-import json
-import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
 from app.db import SessionLocal
-from app.models import User, Person
+from app.main import app
+from app.models import Person, User
 
 client = TestClient(app)
 
@@ -20,7 +17,7 @@ def teardown_module(module):
         u = db.query(User).filter(User.email == TEST_EMAIL).first()
         if u:
             # also delete associated person if exists
-            pid = getattr(u, 'person_id', None)
+            pid = getattr(u, "person_id", None)
             db.delete(u)
             db.commit()
             if pid:
@@ -57,7 +54,7 @@ def test_register_creates_person_and_user():
     try:
         u = db.query(User).filter(User.email == TEST_EMAIL).first()
         if u:
-            pid = getattr(u, 'person_id', None)
+            pid = getattr(u, "person_id", None)
             db.delete(u)
             db.commit()
             if pid:

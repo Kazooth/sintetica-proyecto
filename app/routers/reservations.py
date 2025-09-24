@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, time
+from datetime import datetime, time, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy import and_, or_, select
@@ -6,11 +6,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..db import get_db
+from ..models import Blackout, OpeningHour, Reservation, Resource, User
+from ..schemas import ReservationCreate, ReservationOut
 from ..security import get_current_user
-from ..models import Reservation, Resource, OpeningHour, Blackout, User
-from ..schemas import ReservationOut, ReservationCreate
 
 router = APIRouter()
+
 
 # GET: reservas CONFIRMED de un recurso en un día
 @router.get("", response_model=list[ReservationOut])
@@ -21,14 +22,19 @@ def reservations_of_day(resource_id: int, date: str, db: Session = Depends(get_d
         raise HTTPException(status_code=400, detail="Invalid date. Use YYYY-MM-DD")
     start = day.replace(hour=0, minute=0, second=0, microsecond=0)
     end = start + timedelta(days=1)
-    return db.execute(
-        select(Reservation).where(
-            Reservation.resource_id == resource_id,
-            Reservation.status == "CONFIRMED",
-            Reservation.start_ts < end,
-            Reservation.end_ts > start,
+    return (
+        db.execute(
+            select(Reservation).where(
+                Reservation.resource_id == resource_id,
+                Reservation.status == "CONFIRMED",
+                Reservation.start_ts < end,
+                Reservation.end_ts > start,
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
+
 
 # POST: crear reserva con validaciones (horarios, blackouts, múltiplo, precio)
 @router.post("", response_model=ReservationOut, status_code=201)
@@ -48,7 +54,9 @@ def create_reservation(
 
     minutes = (body.end_ts - body.start_ts).total_seconds() / 60.0
     if minutes % float(res.slot_minutes) != 0:
-        raise HTTPException(status_code=400, detail=f"Duration must be multiple of {res.slot_minutes} minutes")
+        raise HTTPException(
+            status_code=400, detail=f"Duration must be multiple of {res.slot_minutes} minutes"
+        )
 
     # Opening hours del día
     dow = body.start_ts.isoweekday()  # 1..7
@@ -60,7 +68,9 @@ def create_reservation(
     if not oh:
         raise HTTPException(status_code=400, detail="Establishment closed this day")
 
-    def _mins(t: time) -> int: return t.hour * 60 + t.minute
+    def _mins(t: time) -> int:
+        return t.hour * 60 + t.minute
+
     start_m = body.start_ts.hour * 60 + body.start_ts.minute
     end_m = body.end_ts.hour * 60 + body.end_ts.minute
     if not (_mins(oh.open_time) <= start_m and end_m <= _mins(oh.close_time)):
@@ -73,7 +83,7 @@ def create_reservation(
         .filter(
             Blackout.establishment_id == res.establishment_id,
             overlap,
-            or_(Blackout.resource_id == None, Blackout.resource_id == res.id),
+            or_(Blackout.resource_id.is_(None), Blackout.resource_id == res.id),
         )
         .first()
     )
@@ -105,6 +115,7 @@ def create_reservation(
     db.refresh(new_r)
     return new_r
 
+
 # POST: cancelar (soft delete)
 @router.post("/{reservation_id}/cancel", status_code=200)
 def cancel_reservation(
@@ -121,6 +132,7 @@ def cancel_reservation(
     db.add(r)
     db.commit()
     return {"ok": True, "status": r.status}
+
 
 # DELETE: borrar físicamente (úsalo con cuidado)
 @router.delete("/{reservation_id}", status_code=204)
