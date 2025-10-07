@@ -9,7 +9,8 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+    
 
-
-# Provide a safe default for type-checking; real value comes from env/.env in runtime/CI
-settings = Settings(DATABASE_URL="postgresql+psycopg://user:pass@localhost:5432/postgres")
+# Instantiate settings from environment or .env file. In CI/local use the DATABASE_URL env var or .env.
+# Avoid hardcoding credentials here so runtime respects the docker/local DB settings.
+settings = Settings()
