@@ -36,8 +36,8 @@ $env:ACCESS_TOKEN_EXPIRE_MINUTES = "60"
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -U pip
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
+pip install -r requirements.txt -c constraints.txt
+pip install -r requirements-dev.txt -c constraints.txt
 pre-commit install
 ```
 
@@ -113,9 +113,10 @@ MyPy está configurado con el plugin de SQLAlchemy; los módulos externos sin st
 
 Workflow en `.github/workflows/ci.yml`:
 
-1. Instala dependencias (incluye `requirements-dev.txt`).
+1. Instala dependencias con `constraints.txt` (incluye `requirements-dev.txt`).
 2. Corre Ruff (lint y format-check).
 3. Corre MyPy.
+3.5 Corre `pre-commit run --all-files` para alinear con hooks locales.
 4. Levanta PostgreSQL 15 como servicio.
 5. Espera a que el DB esté listo y exporta `DATABASE_URL`.
 6. Corre migraciones Alembic `upgrade head`.

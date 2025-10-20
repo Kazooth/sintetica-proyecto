@@ -38,6 +38,10 @@ jobs:
         run: |
           ruff check . --output-format=github
           ruff format --check .
+      - name: Pre-commit (hooks)
+        run: |
+          pre-commit install --install-hooks
+          pre-commit run --all-files
       - name: Type check (mypy)
         run: |
           # Type-check only application code; tests are executed but not type-checked in CI

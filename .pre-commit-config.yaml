@@ -10,7 +10,7 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: ["SQLAlchemy[mypy]==2.0.35"]
-        args: ["--config-file", "mypy.ini", "app", "tests"]
+        args: ["--config-file", "mypy.ini", "app"]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
