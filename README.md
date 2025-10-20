@@ -156,5 +156,3 @@ Workflow en `.github/workflows/ci.yml`:
 - Añadir seeds/fixtures reproducibles como comandos o scripts.
 
 ---
-
-

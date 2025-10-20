@@ -5,7 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Reservation, Resource, Sale, SaleItem
+from ..models import Reservation, Resource, Sale
 from ..security import require_roles
 
 router = APIRouter()
@@ -74,6 +74,4 @@ def resource_utilization(
         .order_by(Resource.id)
         .all()
     )
-    return [
-        {"resource_id": r.resource_id, "minutes": int(r.minutes or 0)} for r in rows
-    ]
+    return [{"resource_id": r.resource_id, "minutes": int(r.minutes or 0)} for r in rows]

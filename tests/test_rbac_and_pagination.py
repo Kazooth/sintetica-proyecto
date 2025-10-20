@@ -72,7 +72,14 @@ def test_reservation_cancel_rbac_customer_only_own():
         s.add(res)
         s.flush()
         tomorrow = (datetime.now(UTC) + timedelta(days=1)).date()
-        s.add(OpeningHour(establishment_id=est.id, weekday=tomorrow.isoweekday(), open_time=time(8,0), close_time=time(22,0)))
+        s.add(
+            OpeningHour(
+                establishment_id=est.id,
+                weekday=tomorrow.isoweekday(),
+                open_time=time(8, 0),
+                close_time=time(22, 0),
+            )
+        )
         s.commit()
         res_id = res.id
 
@@ -81,9 +88,14 @@ def test_reservation_cancel_rbac_customer_only_own():
     u2 = create_user(f"u2+{uuid4().hex[:6]}@example.com", role="CUSTOMER")
 
     # u1 creates a reservation via API
-    start = datetime.combine((datetime.now(UTC) + timedelta(days=1)).date(), time(9,0))
+    start = datetime.combine((datetime.now(UTC) + timedelta(days=1)).date(), time(9, 0))
     end = start + timedelta(hours=1)
-    payload = {"resource_id": res_id, "start_ts": start.isoformat(), "end_ts": end.isoformat(), "channel": "WEB"}
+    payload = {
+        "resource_id": res_id,
+        "start_ts": start.isoformat(),
+        "end_ts": end.isoformat(),
+        "channel": "WEB",
+    }
     r1 = client.post("/reservations", json=payload, headers=auth_headers(u1))
     assert r1.status_code == 201, r1.text
     rid = r1.json()["id"]
@@ -107,7 +119,14 @@ def test_products_delete_requires_owner_or_admin():
         cat = ProductCategory(name=f"C{uuid4().hex[:4]}")
         s.add(cat)
         s.flush()
-        p = Product(establishment_id=est.id, category_id=cat.id, name="PX", price=100, tax_rate=0.19, is_active=True)
+        p = Product(
+            establishment_id=est.id,
+            category_id=cat.id,
+            name="PX",
+            price=100,
+            tax_rate=0.19,
+            is_active=True,
+        )
         s.add(p)
         s.commit()
         pid = p.id
