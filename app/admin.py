@@ -102,8 +102,10 @@ class ReservationAdmin(ModelView, model=Reservation):
         is_created: bool,
         request: Request,
     ) -> None:
-        if getattr(model, "resource_id", None) and getattr(model, "start_ts", None) and getattr(
-            model, "end_ts", None
+        if (
+            getattr(model, "resource_id", None)
+            and getattr(model, "start_ts", None)
+            and getattr(model, "end_ts", None)
         ):
             minutes = (model.end_ts - model.start_ts).total_seconds() / 60.0
             with SessionLocal() as s:
