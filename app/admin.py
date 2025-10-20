@@ -3,9 +3,10 @@ from typing import Any, ClassVar
 from starlette.requests import Request
 
 from fastapi import FastAPI
-from sqladmin import Admin, ModelView
+from sqladmin import Admin, ModelView, action
 
 from .db import SessionLocal, engine
+import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError
 from .models import (
     City,
@@ -57,6 +58,8 @@ class ResourceAdmin(ModelView, model=Resource):
         Resource.is_active,
     ]
     column_filters: ClassVar[Sequence] = [Resource.establishment_id, Resource.is_active]
+    # Permitimos borrar, pero añadimos una acción segura de desactivación masiva.
+    can_delete: ClassVar[bool] = True
 
     # Si el recurso tiene reservas asociadas, el borrado físico viola FK.
     # Sobrescribimos el delete para hacer 'soft delete' (is_active = False) si hay FK.
@@ -74,6 +77,17 @@ class ResourceAdmin(ModelView, model=Resource):
                 obj.is_active = False
                 s.add(obj)
                 s.commit()
+
+    # Acción de admin para desactivar (soft-delete) uno o varios recursos
+    @action("deactivate", "Desactivar", "¿Desactivar los recursos seleccionados?")
+    def action_deactivate(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            s.execute(
+                sa.update(Resource)
+                .where(Resource.id.in_(ids))
+                .values(is_active=False)
+            )
+            s.commit()
 
 
 class OpeningHourAdmin(ModelView, model=OpeningHour):
