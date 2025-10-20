@@ -27,7 +27,23 @@ class EstablishmentAdmin(ModelView, model=Establishment):
         Establishment.id,
         Establishment.name,
         Establishment.address,
+        Establishment.is_active,
     ]
+    column_filters: ClassVar[Sequence] = [Establishment.is_active]
+
+    async def delete_model(self, request: Request, pk: int) -> None:
+        with SessionLocal() as s:
+            obj = s.get(Establishment, pk)
+            if obj is None:
+                return
+            try:
+                s.delete(obj)
+                s.commit()
+            except IntegrityError:
+                s.rollback()
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
 
 
 class ResourceAdmin(ModelView, model=Resource):
@@ -190,7 +206,22 @@ class ProductAdmin(ModelView, model=Product):
 
 
 class ProductCategoryAdmin(ModelView, model=ProductCategory):
-    column_list: ClassVar[Sequence] = [ProductCategory.id, ProductCategory.name]
+    column_list: ClassVar[Sequence] = [ProductCategory.id, ProductCategory.name, ProductCategory.is_active]
+    column_filters: ClassVar[Sequence] = [ProductCategory.is_active]
+
+    async def delete_model(self, request: Request, pk: int) -> None:
+        with SessionLocal() as s:
+            obj = s.get(ProductCategory, pk)
+            if obj is None:
+                return
+            try:
+                s.delete(obj)
+                s.commit()
+            except IntegrityError:
+                s.rollback()
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
 
 
 class SaleAdmin(ModelView, model=Sale):

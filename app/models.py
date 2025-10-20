@@ -106,6 +106,8 @@ class Establishment(Base):
     __table_args__ = (sa.UniqueConstraint("name", "city_id", name="uq_establishment_name_city"),)
     phone: Mapped[str | None] = mapped_column(String(40))
     address: Mapped[str | None] = mapped_column(String(200))
+    # Soft delete
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class EstablishmentStaff(Base):
@@ -213,6 +215,8 @@ class ProductCategory(Base):
     __tablename__ = "product_categories"
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), unique=True)
+    # Soft delete
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
 class Product(Base):
