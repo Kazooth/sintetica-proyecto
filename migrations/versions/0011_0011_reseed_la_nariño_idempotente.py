@@ -63,41 +63,87 @@ WHERE c.name='Girardot'
 -- =========================================================
 -- 3) Usuarios (OWNER/STAFF/CLIENTES)
 -- =========================================================
-INSERT INTO users(email, password_hash, first_name, last_name, role)
-SELECT 'owner@lanarino.local','hash-demo','Luis','Herrera','OWNER'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='owner@lanarino.local');
+-- personas + usuarios (owner)
+INSERT INTO persons(first_name, last_name, email)
+SELECT 'Luis','Herrera','owner@lanarino.local'
+WHERE NOT EXISTS (SELECT 1 FROM persons WHERE email='owner@lanarino.local');
 
-INSERT INTO users(email, password_hash, first_name, last_name, role)
-SELECT 'cajero1@lanarino.local','hash-demo','Paula','Martínez','STAFF'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='cajero1@lanarino.local');
+INSERT INTO users(email, password_hash, person_id, role)
+SELECT 'owner@lanarino.local','hash-demo', p.id,'OWNER'
+FROM persons p WHERE p.email='owner@lanarino.local'
+  AND NOT EXISTS (SELECT 1 FROM users WHERE email='owner@lanarino.local');
 
-INSERT INTO users(email, password_hash, first_name, last_name, role)
-SELECT 'cajero2@lanarino.local','hash-demo','Diego','Gómez','STAFF'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='cajero2@lanarino.local');
+INSERT INTO persons(first_name, last_name, email)
+SELECT 'Paula','Martínez','cajero1@lanarino.local'
+WHERE NOT EXISTS (SELECT 1 FROM persons WHERE email='cajero1@lanarino.local');
 
-INSERT INTO users(email, password_hash, first_name, last_name, role)
-SELECT 'admin@lanarino.local','hash-demo','Andrea','Suárez','ADMIN'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='admin@lanarino.local');
+INSERT INTO users(email, password_hash, person_id, role)
+SELECT 'cajero1@lanarino.local','hash-demo', p.id,'STAFF'
+FROM persons p WHERE p.email='cajero1@lanarino.local'
+  AND NOT EXISTS (SELECT 1 FROM users WHERE email='cajero1@lanarino.local');
 
-INSERT INTO users(email, password_hash, first_name, last_name, role)
-SELECT 'cliente1@lanarino.local','hash-demo','Camilo','Rojas','CUSTOMER'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='cliente1@lanarino.local');
+INSERT INTO persons(first_name, last_name, email)
+SELECT 'Diego','Gómez','cajero2@lanarino.local'
+WHERE NOT EXISTS (SELECT 1 FROM persons WHERE email='cajero2@lanarino.local');
 
-INSERT INTO users(email, password_hash, first_name, last_name, role)
-SELECT 'cliente2@lanarino.local','hash-demo','Laura','Rivera','CUSTOMER'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='cliente2@lanarino.local');
+INSERT INTO users(email, password_hash, person_id, role)
+SELECT 'cajero2@lanarino.local','hash-demo', p.id,'STAFF'
+FROM persons p WHERE p.email='cajero2@lanarino.local'
+  AND NOT EXISTS (SELECT 1 FROM users WHERE email='cajero2@lanarino.local');
 
-INSERT INTO users(email, password_hash, first_name, last_name, role)
-SELECT 'cliente3@lanarino.local','hash-demo','Julián','Pardo','CUSTOMER'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='cliente3@lanarino.local');
+INSERT INTO persons(first_name, last_name, email)
+SELECT 'Andrea','Suárez','admin@lanarino.local'
+WHERE NOT EXISTS (SELECT 1 FROM persons WHERE email='admin@lanarino.local');
 
-INSERT INTO users(email, password_hash, first_name, last_name, role)
-SELECT 'cliente4@lanarino.local','hash-demo','Sofía','López','CUSTOMER'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='cliente4@lanarino.local');
+INSERT INTO users(email, password_hash, person_id, role)
+SELECT 'admin@lanarino.local','hash-demo', p.id,'ADMIN'
+FROM persons p WHERE p.email='admin@lanarino.local'
+  AND NOT EXISTS (SELECT 1 FROM users WHERE email='admin@lanarino.local');
 
-INSERT INTO users(email, password_hash, first_name, last_name, role)
-SELECT 'cliente5@lanarino.local','hash-demo','Manuel','Torres','CUSTOMER'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE email='cliente5@lanarino.local');
+INSERT INTO persons(first_name, last_name, email)
+SELECT 'Camilo','Rojas','cliente1@lanarino.local'
+WHERE NOT EXISTS (SELECT 1 FROM persons WHERE email='cliente1@lanarino.local');
+
+INSERT INTO users(email, password_hash, person_id, role)
+SELECT 'cliente1@lanarino.local','hash-demo', p.id,'CUSTOMER'
+FROM persons p WHERE p.email='cliente1@lanarino.local'
+  AND NOT EXISTS (SELECT 1 FROM users WHERE email='cliente1@lanarino.local');
+
+INSERT INTO persons(first_name, last_name, email)
+SELECT 'Laura','Rivera','cliente2@lanarino.local'
+WHERE NOT EXISTS (SELECT 1 FROM persons WHERE email='cliente2@lanarino.local');
+
+INSERT INTO users(email, password_hash, person_id, role)
+SELECT 'cliente2@lanarino.local','hash-demo', p.id,'CUSTOMER'
+FROM persons p WHERE p.email='cliente2@lanarino.local'
+  AND NOT EXISTS (SELECT 1 FROM users WHERE email='cliente2@lanarino.local');
+
+INSERT INTO persons(first_name, last_name, email)
+SELECT 'Julián','Pardo','cliente3@lanarino.local'
+WHERE NOT EXISTS (SELECT 1 FROM persons WHERE email='cliente3@lanarino.local');
+
+INSERT INTO users(email, password_hash, person_id, role)
+SELECT 'cliente3@lanarino.local','hash-demo', p.id,'CUSTOMER'
+FROM persons p WHERE p.email='cliente3@lanarino.local'
+  AND NOT EXISTS (SELECT 1 FROM users WHERE email='cliente3@lanarino.local');
+
+INSERT INTO persons(first_name, last_name, email)
+SELECT 'Sofía','López','cliente4@lanarino.local'
+WHERE NOT EXISTS (SELECT 1 FROM persons WHERE email='cliente4@lanarino.local');
+
+INSERT INTO users(email, password_hash, person_id, role)
+SELECT 'cliente4@lanarino.local','hash-demo', p.id,'CUSTOMER'
+FROM persons p WHERE p.email='cliente4@lanarino.local'
+  AND NOT EXISTS (SELECT 1 FROM users WHERE email='cliente4@lanarino.local');
+
+INSERT INTO persons(first_name, last_name, email)
+SELECT 'Manuel','Torres','cliente5@lanarino.local'
+WHERE NOT EXISTS (SELECT 1 FROM persons WHERE email='cliente5@lanarino.local');
+
+INSERT INTO users(email, password_hash, person_id, role)
+SELECT 'cliente5@lanarino.local','hash-demo', p.id,'CUSTOMER'
+FROM persons p WHERE p.email='cliente5@lanarino.local'
+  AND NOT EXISTS (SELECT 1 FROM users WHERE email='cliente5@lanarino.local');
 
 -- set owner al establecimiento
 UPDATE establishments e
