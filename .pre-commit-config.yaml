@@ -9,8 +9,16 @@ repos:
     rev: v1.11.2
     hooks:
       - id: mypy
-        additional_dependencies: ["SQLAlchemy[mypy]==2.0.35"]
+        additional_dependencies: [
+          "SQLAlchemy[mypy]==2.0.35",
+          "pydantic==2.9.2",
+          "pydantic-settings==2.5.2",
+          "fastapi==0.115.0",
+          "starlette==0.38.6",
+          "sqladmin==0.18.0"
+        ]
         args: ["--config-file", "mypy.ini", "app"]
+        pass_filenames: false
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:

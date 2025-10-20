@@ -252,35 +252,35 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_inventory_stock_product_id
 -- =========================================================
 INSERT INTO inventory_tx (product_id, qty, tx_type, reason, created_at)
 SELECT p.id, 48, 'IN', 'Carga inicial', NOW()
-FROM products p 
+FROM products p
 JOIN establishments e ON e.id = p.establishment_id
 WHERE e.name = 'Canchas Sintéticas La Nariño' AND p.name = 'Agua 600ml'
   AND NOT EXISTS (SELECT 1 FROM inventory_stock s WHERE s.product_id = p.id);
 
 INSERT INTO inventory_tx (product_id, qty, tx_type, reason, created_at)
 SELECT p.id, 36, 'IN', 'Carga inicial', NOW()
-FROM products p 
+FROM products p
 JOIN establishments e ON e.id = p.establishment_id
 WHERE e.name = 'Canchas Sintéticas La Nariño' AND p.name = 'Gaseosa 400ml'
   AND NOT EXISTS (SELECT 1 FROM inventory_stock s WHERE s.product_id = p.id);
 
 INSERT INTO inventory_tx (product_id, qty, tx_type, reason, created_at)
 SELECT p.id, 24, 'IN', 'Carga inicial', NOW()
-FROM products p 
+FROM products p
 JOIN establishments e ON e.id = p.establishment_id
 WHERE e.name = 'Canchas Sintéticas La Nariño' AND p.name = 'Gatorade 500ml'
   AND NOT EXISTS (SELECT 1 FROM inventory_stock s WHERE s.product_id = p.id);
 
 INSERT INTO inventory_tx (product_id, qty, tx_type, reason, created_at)
 SELECT p.id, 40, 'IN', 'Carga inicial', NOW()
-FROM products p 
+FROM products p
 JOIN establishments e ON e.id = p.establishment_id
 WHERE e.name = 'Canchas Sintéticas La Nariño' AND p.name = 'Papas de limón 25g'
   AND NOT EXISTS (SELECT 1 FROM inventory_stock s WHERE s.product_id = p.id);
 
 INSERT INTO inventory_tx (product_id, qty, tx_type, reason, created_at)
 SELECT p.id, 30, 'IN', 'Carga inicial', NOW()
-FROM products p 
+FROM products p
 JOIN establishments e ON e.id = p.establishment_id
 WHERE e.name = 'Canchas Sintéticas La Nariño' AND p.name = 'Chocoramo'
   AND NOT EXISTS (SELECT 1 FROM inventory_stock s WHERE s.product_id = p.id);
@@ -317,22 +317,22 @@ BEGIN
 
   IF est_id IS NOT NULL THEN
     -- Elimina asignaciones de staff
-    DELETE FROM establishment_staff 
+    DELETE FROM establishment_staff
     WHERE establishment_id = est_id;
 
     -- Elimina inventario relacionado a productos del establecimiento
-    DELETE FROM inventory_tx 
+    DELETE FROM inventory_tx
     WHERE product_id IN (
       SELECT id FROM products WHERE establishment_id = est_id
     );
 
-    DELETE FROM inventory_stock 
+    DELETE FROM inventory_stock
     WHERE product_id IN (
       SELECT id FROM products WHERE establishment_id = est_id
     );
 
     -- Elimina productos y categorías si no tienen más productos
-    DELETE FROM products 
+    DELETE FROM products
     WHERE establishment_id = est_id;
 
     DELETE FROM product_categories c
