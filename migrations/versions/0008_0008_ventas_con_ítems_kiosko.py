@@ -13,7 +13,7 @@ def upgrade():
     BEGIN
       SELECT id INTO est_id FROM establishments WHERE name='Canchas Sintéticas La Nariño';
       SELECT id INTO cajero FROM users WHERE email='cajero1@lanarino.local';
-      SELECT id INTO res_id FROM reservations 
+      SELECT id INTO res_id FROM reservations
       WHERE status='CONFIRMED'
       ORDER BY id ASC LIMIT 1;
 

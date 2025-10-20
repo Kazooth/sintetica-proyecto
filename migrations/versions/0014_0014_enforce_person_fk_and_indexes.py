@@ -15,10 +15,9 @@ depends_on = None
 
 
 def upgrade():
-    # add index on persons.email
-    op.create_index('ix_persons_email', 'persons', ['email'], unique=False)
-    # add index on users.person_id
-    op.create_index('ix_users_person_id', 'users', ['person_id'], unique=False)
+    # add indexes idempotently (baseline may already include them via models)
+    op.execute("CREATE INDEX IF NOT EXISTS ix_persons_email ON persons (email)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_users_person_id ON users (person_id)")
 
     # ensure person_id is NOT NULL - only if all rows have value (we checked earlier)
     with op.batch_alter_table('users') as batch_op:
@@ -28,5 +27,6 @@ def upgrade():
 def downgrade():
     with op.batch_alter_table('users') as batch_op:
         batch_op.alter_column('person_id', existing_type=sa.Integer(), nullable=True)
-    op.drop_index('ix_users_person_id', table_name='users')
-    op.drop_index('ix_persons_email', table_name='persons')
+    # drop indexes idempotently
+    op.execute("DROP INDEX IF EXISTS ix_users_person_id")
+    op.execute("DROP INDEX IF EXISTS ix_persons_email")

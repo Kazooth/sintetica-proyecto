@@ -2,19 +2,21 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Resource, OpeningHour
-from ..schemas import ResourceOut, OpeningHourOut
+from ..models import OpeningHour, Resource
+from ..schemas import OpeningHourOut, ResourceOut
 
 router = APIRouter()
+
 
 @router.get("", response_model=list[ResourceOut])
 def list_resources(establishment_id: int, db: Session = Depends(get_db)):
     return (
         db.query(Resource)
-        .filter(Resource.establishment_id == establishment_id, Resource.is_active == True)
+        .filter(Resource.establishment_id == establishment_id, Resource.is_active)
         .order_by(Resource.name)
         .all()
     )
+
 
 @router.get("/opening-hours", response_model=list[OpeningHourOut])
 def get_opening_hours(establishment_id: int, db: Session = Depends(get_db)):

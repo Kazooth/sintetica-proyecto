@@ -1,13 +1,12 @@
-
 # backend/app/models.py
-from datetime import datetime, date, time
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from datetime import date, datetime, time
+
 import sqlalchemy as sa
-from sqlalchemy import (
-    String, Boolean, ForeignKey, Numeric, Text,
-    DateTime, Time, Date
-)
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
 # Si más adelante quieres reflejar UNIQUE/INDEX del SQL, puedes añadir UniqueConstraint/Index.
+
 
 class Base(DeclarativeBase):
     pass
@@ -22,10 +21,13 @@ class Person(Base):
     phone: Mapped[str | None] = mapped_column(String(40))
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     birth_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    
+
     # index hint: email is often searched
     # make email indexed and unique at DB level
-    __table_args__ = (sa.Index('ix_persons_email', 'email'), sa.UniqueConstraint('email', name='uq_persons_email'))
+    __table_args__ = (
+        sa.Index("ix_persons_email", "email"),
+        sa.UniqueConstraint("email", name="uq_persons_email"),
+    )
 
 
 # (no duplicate Base)
@@ -43,7 +45,7 @@ class City(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
     state_id: Mapped[int] = mapped_column(ForeignKey("states.id"))
-    __table_args__ = (sa.UniqueConstraint('name', 'state_id', name='uq_city_name_state'),)
+    __table_args__ = (sa.UniqueConstraint("name", "state_id", name="uq_city_name_state"),)
 
 
 # --- Seguridad / Personas ---
@@ -54,7 +56,6 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     person_id: Mapped[int] = mapped_column(ForeignKey("persons.id"))
     # relationship to Person for easy access
-    from sqlalchemy.orm import relationship
     person: Mapped["Person"] = relationship("Person", lazy="joined")
     # valores: ADMIN/OWNER/STAFF/CUSTOMER (tu SQL lo fija con CHECK y default)
     role: Mapped[str] = mapped_column(String(20))
@@ -62,11 +63,11 @@ class User(Base):
     # convenience properties so existing code can keep using user.first_name / last_name
     @property
     def first_name(self) -> str | None:
-        return getattr(self.person, 'first_name', None)
+        return getattr(self.person, "first_name", None)
 
     @property
     def last_name(self) -> str | None:
-        return getattr(self.person, 'last_name', None)
+        return getattr(self.person, "last_name", None)
 
 
 class Role(Base):
@@ -102,7 +103,7 @@ class Establishment(Base):
     city_id: Mapped[int] = mapped_column(ForeignKey("cities.id"))
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     name: Mapped[str] = mapped_column(String(160))
-    __table_args__ = (sa.UniqueConstraint('name', 'city_id', name='uq_establishment_name_city'),)
+    __table_args__ = (sa.UniqueConstraint("name", "city_id", name="uq_establishment_name_city"),)
     phone: Mapped[str | None] = mapped_column(String(40))
     address: Mapped[str | None] = mapped_column(String(200))
 
@@ -124,7 +125,7 @@ class Resource(Base):
     price_per_slot: Mapped[int | None]
     currency: Mapped[str | None] = mapped_column(String(8))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    __table_args__ = (sa.UniqueConstraint('establishment_id', 'name', name='uq_resource_est_name'),)
+    __table_args__ = (sa.UniqueConstraint("establishment_id", "name", name="uq_resource_est_name"),)
 
 
 class OpeningHour(Base):
@@ -134,7 +135,9 @@ class OpeningHour(Base):
     weekday: Mapped[int]
     open_time: Mapped[time]  # TIME en SQL
     close_time: Mapped[time]
-    __table_args__ = (sa.UniqueConstraint('establishment_id', 'weekday', name='uq_opening_est_weekday'),)
+    __table_args__ = (
+        sa.UniqueConstraint("establishment_id", "weekday", name="uq_opening_est_weekday"),
+    )
 
 
 class Blackout(Base):
@@ -144,7 +147,7 @@ class Blackout(Base):
     resource_id: Mapped[int | None] = mapped_column(ForeignKey("resources.id"))
     # En SQL son TIMESTAMPTZ:
     start_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    end_ts:   Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     reason: Mapped[str | None] = mapped_column(String(200))
 
 
@@ -159,8 +162,9 @@ class PricingRule(Base):
     price_per_slot: Mapped[int]
     # -> DATE, no timestamptz
     effective_from: Mapped[date | None] = mapped_column(Date, nullable=True)
-    effective_to:   Mapped[date | None] = mapped_column(Date, nullable=True)
+    effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
     priority: Mapped[int | None]
+
 
 # --- Reservas / Eventos ---
 # backend/app/models.py  (solo fragmento)
@@ -168,15 +172,13 @@ class Reservation(Base):
     __tablename__ = "reservations"
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(ForeignKey("resources.id"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))   # ← AGREGA ESTO
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))  # ← AGREGA ESTO
     start_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    end_ts:   Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     notes: Mapped[str | None] = mapped_column(String, nullable=True)
     status: Mapped[str]
     total_price: Mapped[int]
     channel: Mapped[str | None]
-
-
 
 
 class ReservationPayment(Base):
@@ -197,7 +199,7 @@ class Event(Base):
     name: Mapped[str] = mapped_column(String(160))
     # TIMESTAMPTZ en SQL:
     start_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    end_ts:   Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_ts: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_public: Mapped[bool] = mapped_column(Boolean, default=True)
     affects_pricing: Mapped[bool] = mapped_column(Boolean, default=False)
     blocks_booking: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -222,7 +224,7 @@ class Product(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     # sku nuevo (nullable + unique)
     sku: Mapped[str | None] = mapped_column(String(40), unique=True, nullable=True)
-    __table_args__ = (sa.UniqueConstraint('establishment_id', 'name', name='uq_product_est_name'),)
+    __table_args__ = (sa.UniqueConstraint("establishment_id", "name", name="uq_product_est_name"),)
 
 
 class InventoryStock(Base):
@@ -252,7 +254,9 @@ class Sale(Base):
     establishment_id: Mapped[int] = mapped_column(ForeignKey("establishments.id"))
     cashier_user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     # En tu SQL has dejado ON DELETE SET NULL — reflejamos eso:
-    reservation_id: Mapped[int | None] = mapped_column(ForeignKey("reservations.id", ondelete="SET NULL"))
+    reservation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("reservations.id", ondelete="SET NULL")
+    )
     payment_method: Mapped[str] = mapped_column(String(20))  # CHECK en SQL
     subtotal: Mapped[int]
     tax_total: Mapped[int]

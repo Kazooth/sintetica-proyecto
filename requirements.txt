@@ -17,3 +17,4 @@ passlib[bcrypt]==1.7.4
 email-validator==2.2.0
 python-multipart==0.0.9
 sqladmin==0.18.0
+bcrypt==3.2.2  # Pin to version compatible with passlib 1.7.4; bcrypt>=4 changes API/behavior

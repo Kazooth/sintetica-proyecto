@@ -1,4 +1,3 @@
-
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,10 +5,11 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Blackout, Resource, Establishment, User
+from ..models import Blackout, Establishment, Resource, User
 from ..security import get_current_user
 
 router = APIRouter()
+
 
 class BlackoutCreate(BaseModel):
     establishment_id: int
@@ -18,9 +18,11 @@ class BlackoutCreate(BaseModel):
     end_ts: datetime
     reason: str | None = None
 
+
 @router.get("", response_model=list[BlackoutCreate])
 def list_blackouts(establishment_id: int, db: Session = Depends(get_db)):
     return db.query(Blackout).filter(Blackout.establishment_id == establishment_id).all()
+
 
 @router.post("", response_model=BlackoutCreate, status_code=201)
 def create_blackout(
@@ -40,6 +42,7 @@ def create_blackout(
     db.commit()
     db.refresh(b)
     return b
+
 
 @router.delete("/{blackout_id}", status_code=204)
 def delete_blackout(

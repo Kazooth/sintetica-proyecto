@@ -1,0 +1,5 @@
+# Global constraints to keep CI and local installs reproducible
+# Rationale: passlib 1.7.4 works reliably with bcrypt 3.2.2; httpx pinned for Starlette TestClient
+passlib==1.7.4
+bcrypt==3.2.2
+httpx==0.27.2

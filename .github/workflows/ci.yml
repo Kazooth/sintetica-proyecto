@@ -9,22 +9,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: sintetica
-          POSTGRES_DB: girardot
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U user -d girardot"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
+      - name: Install and start PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-contrib
+          sudo systemctl start postgresql
+          # Crear rol y base de datos requeridos por la app
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'user') THEN CREATE ROLE \"user\" WITH LOGIN PASSWORD 'sintetica'; END IF; END \$\$;"
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER ROLE \"user\" WITH LOGIN PASSWORD 'sintetica';"
+          # Crear DB solo si no existe
+          if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='girardot'" | grep -q 1; then
+            sudo -u postgres createdb -O "user" girardot
+          fi
+          # Extensión necesaria por migrations/tests
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -d girardot -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -32,10 +32,25 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Wait for Postgres
+          pip install -r requirements.txt -c constraints.txt
+          pip install -r requirements-dev.txt -c constraints.txt
+      - name: Lint (ruff)
         run: |
-          until pg_isready -h localhost -p 5432 -U user; do sleep 1; done
+          ruff check . --output-format=github
+          ruff format --check .
+      - name: Pre-commit (hooks)
+        run: |
+          pre-commit install --install-hooks
+          pre-commit run --all-files
+      - name: Type check (mypy)
+        run: |
+          # Type-check only application code; tests are executed but not type-checked in CI
+          mypy --config-file mypy.ini app
+      - name: Wait for Postgres
+        env:
+          PGPASSWORD: sintetica
+        run: |
+          until pg_isready -h 127.0.0.1 -p 5432 -U user; do sleep 1; done
       - name: Export DATABASE_URL
         run: |
           echo "DATABASE_URL=postgresql+psycopg://user:sintetica@localhost:5432/girardot" >> $GITHUB_ENV

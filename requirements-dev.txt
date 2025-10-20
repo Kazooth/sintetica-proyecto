@@ -1,0 +1,14 @@
+# Development and CI tooling
+ruff==0.6.9
+mypy==1.11.2
+pre-commit==3.8.0
+
+# Optional: SQLAlchemy mypy plugin and stubs
+SQLAlchemy[mypy]==2.0.35
+
+# Test runner
+pytest==8.4.2
+
+# Needed for fastapi/starlette TestClient used in tests
+# Pin to a version compatible with Starlette 0.38.x
+httpx==0.27.2

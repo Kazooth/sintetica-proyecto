@@ -1,0 +1,43 @@
+target-version = "py311"
+line-length = 100
+indent-width = 4
+extend-exclude = [
+  "migrations/**",
+  "get-pip.py",
+]
+
+[lint]
+select = [
+  "E",  # pycodestyle
+  "F",  # pyflakes
+  "I",  # isort
+  "B",  # flake8-bugbear
+  "UP", # pyupgrade
+  "N",  # pep8-naming
+  "S",  # bandit
+  "ASYNC", # flake8-async
+  "PIE", # flake8-pie
+  "RUF", # ruff specific
+]
+ignore = [
+  # Framework patterns and style compromises
+  "B008",   # FastAPI Depends in defaults is idiomatic
+  "B904",   # Allow bare re-raise without "from" for brevity
+  "E501",   # Line length enforced via formatter instead
+  # Non-ASCII punctuation in comments/strings (we have Spanish docs)
+  "RUF001", "RUF002", "RUF003",
+]
+
+[lint.isort]
+known-first-party = ["app"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[lint.per-file-ignores]
+"tests/*" = ["S101", "S105", "I001"]
+"scripts/*" = ["E501", "I001", "F841", "S105"]
+"app/admin.py" = ["I001"]

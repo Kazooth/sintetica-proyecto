@@ -4,10 +4,11 @@ from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..models import Product, Sale, SaleItem, User
-from ..schemas import SaleCreate, SaleOut, SaleItemOut
+from ..schemas import SaleCreate, SaleItemOut, SaleOut
 from ..security import get_current_user
 
 router = APIRouter()
+
 
 # POST: crear venta (cálculo subtotal/IVA/total)
 @router.post("", response_model=SaleOut, status_code=201)
@@ -29,9 +30,14 @@ def create_sale(
     for it in payload.items:
         p = products.get(it.product_id)
         if not p or not p.is_active:
-            raise HTTPException(status_code=404, detail=f"Product {it.product_id} not found or inactive")
+            raise HTTPException(
+                status_code=404, detail=f"Product {it.product_id} not found or inactive"
+            )
         if p.establishment_id != payload.establishment_id:
-            raise HTTPException(status_code=400, detail=f"Product {p.id} not belongs to establishment {payload.establishment_id}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Product {p.id} not belongs to establishment {payload.establishment_id}",
+            )
 
         unit_price = p.price
         line_subtotal = unit_price * it.qty
@@ -98,6 +104,7 @@ def create_sale(
         items=items_out,
     )
 
+
 # POST: anular venta (VOID) – opcional si tu tabla tiene columna 'status'
 @router.post("/{sale_id}/void", status_code=200)
 def void_sale(
@@ -110,9 +117,7 @@ def void_sale(
         raise HTTPException(status_code=404, detail="Sale not found")
 
     # Si tu tabla 'sales' no tiene columna 'status', comenta esto o agrega la columna con un ALTER.
-    try:
-        getattr(s, "status")
-    except AttributeError:
+    if not hasattr(s, "status"):
         # Seguimos devolviendo 200 pero indicamos que no hay soporte
         return {"ok": False, "detail": "Column 'status' missing in sales table"}
 
