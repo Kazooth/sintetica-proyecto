@@ -13,7 +13,11 @@ if (-not (Test-Path ".\.venv\Scripts\Activate.ps1")) {
 
 . .\.venv\Scripts\Activate.ps1
 pip install -U pip
-pip install -r requirements.txt
+if (Test-Path ".\constraints.txt") {
+    pip install -r requirements.txt -c constraints.txt
+} else {
+    pip install -r requirements.txt
+}
 
 $env:DATABASE_URL = $DatabaseUrl
 python -m alembic upgrade head

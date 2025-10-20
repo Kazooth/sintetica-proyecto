@@ -27,7 +27,11 @@ if (-not (Test-Path ".\.venv\Scripts\Activate.ps1")) {
 
 . .\.venv\Scripts\Activate.ps1
 pip install -U pip | Out-Null
-pip install -r requirements.txt | Out-Null
+if (Test-Path ".\constraints.txt") {
+    pip install -r requirements.txt -c constraints.txt | Out-Null
+} else {
+    pip install -r requirements.txt | Out-Null
+}
 
 $env:DATABASE_URL = $DatabaseUrl
 
