@@ -11,7 +11,9 @@ from .config import settings
 from .db import get_db
 from .models import User
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Prefer bcrypt, but also support bcrypt_sha256 to avoid 72-byte truncation edge cases
+# in environments where bcrypt backend enforces strict 72-byte limits.
+pwd_context = CryptContext(schemes=["bcrypt", "bcrypt_sha256"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 ALGORITHM = "HS256"
