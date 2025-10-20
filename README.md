@@ -157,4 +157,4 @@ Workflow en `.github/workflows/ci.yml`:
 
 ---
 
-Si quieres, preparo una guía rápida para levantar Postgres vía Docker Compose y datos de ejemplo.
+
