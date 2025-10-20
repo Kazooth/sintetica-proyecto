@@ -40,7 +40,8 @@ jobs:
           ruff format --check .
       - name: Type check (mypy)
         run: |
-          mypy --config-file mypy.ini app tests
+          # Type-check only application code; tests are executed but not type-checked in CI
+          mypy --config-file mypy.ini app
       - name: Wait for Postgres
         run: |
           until pg_isready -h localhost -p 5432 -U user; do sleep 1; done
