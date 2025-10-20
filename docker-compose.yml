@@ -18,5 +18,21 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sintetica-api
+    environment:
+      DATABASE_URL: postgresql+psycopg://user:sintetica@db:5432/girardot
+      CORS_ORIGINS: http://localhost:5173
+      SECRET_KEY: please_change_me
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:
