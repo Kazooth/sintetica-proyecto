@@ -205,11 +205,11 @@ WHERE e.name='Canchas Sintéticas La Nariño'
 -- =========================================================
 -- 7) Categorías y productos
 -- =========================================================
-INSERT INTO product_categories (name)
-SELECT 'Bebidas' WHERE NOT EXISTS (SELECT 1 FROM product_categories WHERE name='Bebidas');
+INSERT INTO product_categories (name, is_active)
+SELECT 'Bebidas', TRUE WHERE NOT EXISTS (SELECT 1 FROM product_categories WHERE name='Bebidas');
 
-INSERT INTO product_categories (name)
-SELECT 'Snacks' WHERE NOT EXISTS (SELECT 1 FROM product_categories WHERE name='Snacks');
+INSERT INTO product_categories (name, is_active)
+SELECT 'Snacks', TRUE WHERE NOT EXISTS (SELECT 1 FROM product_categories WHERE name='Snacks');
 
 INSERT INTO products (establishment_id, category_id, name, price, tax_rate, is_active)
 SELECT e.id, c.id, 'Agua 600ml', 3000, 0.00, TRUE

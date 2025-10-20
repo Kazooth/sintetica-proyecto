@@ -7,10 +7,10 @@ depends_on = None
 
 def upgrade():
     op.execute("""
-    INSERT INTO product_categories (name) VALUES ('Bebidas')
+    INSERT INTO product_categories (name, is_active) VALUES ('Bebidas', TRUE)
     ON CONFLICT (name) DO NOTHING;
 
-    INSERT INTO product_categories (name) VALUES ('Snacks')
+    INSERT INTO product_categories (name, is_active) VALUES ('Snacks', TRUE)
     ON CONFLICT (name) DO NOTHING;
 
     -- Productos para La Nariño

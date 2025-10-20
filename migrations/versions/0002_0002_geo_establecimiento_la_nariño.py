@@ -18,9 +18,10 @@ def upgrade():
     ON CONFLICT (name, state_id) DO NOTHING;
 
     -- Establecimiento
-    INSERT INTO establishments (city_id, owner_user_id, name, phone, address)
+    -- Nota: incluir is_active=TRUE para compatibilidad con esquemas donde la columna existe y es NOT NULL
+    INSERT INTO establishments (city_id, owner_user_id, name, phone, address, is_active)
     SELECT c.id, NULL, 'Canchas Sintéticas La Nariño', '3053992501',
-           'Calle 31 #9-12, Barrio La Nariño'
+           'Calle 31 #9-12, Barrio La Nariño', TRUE
     FROM cities c
     WHERE c.name='Girardot'
     ON CONFLICT (name, city_id) DO NOTHING;
