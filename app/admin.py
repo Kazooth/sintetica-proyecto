@@ -40,10 +40,11 @@ class ResourceAdmin(ModelView, model=Resource):
         Resource.slot_minutes,
         Resource.is_active,
     ]
+    column_filters: ClassVar[Sequence] = [Resource.establishment_id, Resource.is_active]
 
     # Si el recurso tiene reservas asociadas, el borrado físico viola FK.
     # Sobrescribimos el delete para hacer 'soft delete' (is_active = False) si hay FK.
-    async def delete_model(self, request: Request, pk: int) -> None:  # type: ignore[override]
+    async def delete_model(self, request: Request, pk: int) -> None:
         with SessionLocal() as s:
             obj = s.get(Resource, pk)
             if obj is None:
@@ -169,10 +170,11 @@ class ProductAdmin(ModelView, model=Product):
         Product.is_active,
     ]
     column_searchable_list: ClassVar[Sequence] = [Product.name]
+    column_filters: ClassVar[Sequence] = [Product.establishment_id, Product.is_active]
 
     # Productos con ventas/inventario referenciándolos no pueden borrarse físicamente.
     # Hacemos soft delete si el DELETE choca con FK.
-    async def delete_model(self, request: Request, pk: int) -> None:  # type: ignore[override]
+    async def delete_model(self, request: Request, pk: int) -> None:
         with SessionLocal() as s:
             obj = s.get(Product, pk)
             if obj is None:
