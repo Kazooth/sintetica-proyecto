@@ -22,23 +22,27 @@ def sales_summary(
         raise HTTPException(status_code=400, detail="date_to must be after date_from")
 
     # Use explicit SQL to avoid GROUP BY ambiguity across dialect/param styles
-    rows = db.execute(
-        text(
-            """
-            SELECT
-                date_trunc('day', sales.created_at) AS day,
-                sum(sales.subtotal) AS subtotal,
-                sum(sales.tax_total) AS tax_total,
-                sum(sales.grand_total) AS grand_total,
-                count(sales.id) AS count
-            FROM sales
-            WHERE sales.created_at >= :date_from AND sales.created_at < :date_to
-            GROUP BY 1
-            ORDER BY 1
-            """
-        ),
-        {"date_from": date_from, "date_to": date_to},
-    ).mappings().all()
+    rows = (
+        db.execute(
+            text(
+                """
+                SELECT
+                    date_trunc('day', sales.created_at) AS day,
+                    sum(sales.subtotal) AS subtotal,
+                    sum(sales.tax_total) AS tax_total,
+                    sum(sales.grand_total) AS grand_total,
+                    count(sales.id) AS count
+                FROM sales
+                WHERE sales.created_at >= :date_from AND sales.created_at < :date_to
+                GROUP BY 1
+                ORDER BY 1
+                """
+            ),
+            {"date_from": date_from, "date_to": date_to},
+        )
+        .mappings()
+        .all()
+    )
     return [
         {
             "day": r["day"].isoformat(),
