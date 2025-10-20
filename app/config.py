@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from pydantic_settings import BaseSettings
 
 
@@ -9,8 +11,11 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
-    
+
 
 # Instantiate settings from environment or .env file. In CI/local use the DATABASE_URL env var or .env.
-# Avoid hardcoding credentials here so runtime respects the docker/local DB settings.
-settings = Settings()
+# For MyPy, provide a value only during type checking to satisfy required argument analysis.
+if TYPE_CHECKING:
+    settings: Settings = Settings(DATABASE_URL="")
+else:
+    settings = Settings()
