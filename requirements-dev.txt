@@ -5,3 +5,6 @@ pre-commit==3.8.0
 
 # Optional: SQLAlchemy mypy plugin and stubs
 SQLAlchemy[mypy]==2.0.35
+
+# Test runner
+pytest==8.4.2
