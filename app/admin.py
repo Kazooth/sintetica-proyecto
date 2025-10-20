@@ -206,7 +206,11 @@ class ProductAdmin(ModelView, model=Product):
 
 
 class ProductCategoryAdmin(ModelView, model=ProductCategory):
-    column_list: ClassVar[Sequence] = [ProductCategory.id, ProductCategory.name, ProductCategory.is_active]
+    column_list: ClassVar[Sequence] = [
+        ProductCategory.id,
+        ProductCategory.name,
+        ProductCategory.is_active,
+    ]
     column_filters: ClassVar[Sequence] = [ProductCategory.is_active]
 
     async def delete_model(self, request: Request, pk: int) -> None:
