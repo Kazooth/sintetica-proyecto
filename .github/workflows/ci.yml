@@ -11,20 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Start Postgres (robust pull + run)
+      - name: Install and start PostgreSQL
         run: |
-          set -e
-          IMG=""
-          for REG in public.ecr.aws/docker/library/postgres docker.io/library/postgres; do
-            for i in 1 2 3 4 5; do
-              if docker pull "${REG}:15"; then IMG="${REG}:15"; break; else sleep $((2*i)); fi
-            done
-            [ -n "$IMG" ] && break
-          done
-          if [ -z "$IMG" ]; then echo "Failed to pull Postgres image from all registries"; exit 1; fi
-          echo "POSTGRES_IMAGE=$IMG" >> $GITHUB_ENV
-          docker run -d --name postgres-ci -p 5432:5432 \
-            -e POSTGRES_USER=user -e POSTGRES_PASSWORD=sintetica -e POSTGRES_DB=girardot "$IMG"
+          sudo apt-get update
+          sudo apt-get install -y postgresql postgresql-contrib
+          sudo systemctl start postgresql
+          # Crear rol y base de datos requeridos por la app
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'user') THEN CREATE ROLE \"user\" WITH LOGIN PASSWORD 'sintetica'; END IF; END $$;"
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER ROLE \"user\" WITH LOGIN PASSWORD 'sintetica';"
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE DATABASE girardot OWNER \"user\";" || true
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -43,6 +38,8 @@ jobs:
           # Type-check only application code; tests are executed but not type-checked in CI
           mypy --config-file mypy.ini app
       - name: Wait for Postgres
+        env:
+          PGPASSWORD: sintetica
         run: |
           until pg_isready -h 127.0.0.1 -p 5432 -U user; do sleep 1; done
       - name: Export DATABASE_URL
@@ -54,7 +51,3 @@ jobs:
       - name: Run tests
         run: |
           pytest -q
-      - name: Stop Postgres container
-        if: always()
-        run: |
-          docker rm -f postgres-ci || true
