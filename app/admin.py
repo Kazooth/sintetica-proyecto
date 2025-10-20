@@ -82,11 +82,7 @@ class ResourceAdmin(ModelView, model=Resource):
     @action("deactivate", "Desactivar", "¿Desactivar los recursos seleccionados?")
     def action_deactivate(self, ids: list[int]) -> None:
         with SessionLocal() as s:
-            s.execute(
-                sa.update(Resource)
-                .where(Resource.id.in_(ids))
-                .values(is_active=False)
-            )
+            s.execute(sa.update(Resource).where(Resource.id.in_(ids)).values(is_active=False))
             s.commit()
 
 
