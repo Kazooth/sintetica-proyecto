@@ -64,6 +64,23 @@ python -m alembic revision -m "<tu mensaje>" --autogenerate
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
+Atajo (Windows):
+
+```powershell
+./scripts/run.ps1
+```
+
+## Usar Docker Compose (solo DB)
+
+Levanta PostgreSQL 15 localmente en 5432:
+
+```powershell
+docker compose up -d db
+$env:DATABASE_URL = "postgresql+psycopg://user:sintetica@localhost:5432/girardot"
+python -m alembic upgrade head
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
 - Salud: GET `http://127.0.0.1:8000/health`
 - Panel admin: registrado vía `sqladmin` en `app/admin.py` cuando la app arranca
 
