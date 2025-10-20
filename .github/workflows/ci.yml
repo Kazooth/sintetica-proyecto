@@ -9,27 +9,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        # Use AWS ECR Public mirror to avoid transient Docker Hub 503 errors
-        image: public.ecr.aws/docker/library/postgres:15
-        env:
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: sintetica
-          POSTGRES_DB: girardot
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U user -d girardot"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      # Fallback: proactively pull mirror image with simple retry (non-blocking if service already started)
-      - name: Pre-pull Postgres image (retry)
+      - name: Start Postgres (robust pull + run)
         run: |
-          for i in 1 2 3; do docker pull public.ecr.aws/docker/library/postgres:15 && break || sleep $((2*i)); done
+          set -e
+          IMG=""
+          for REG in public.ecr.aws/docker/library/postgres docker.io/library/postgres; do
+            for i in 1 2 3 4 5; do
+              if docker pull "${REG}:15"; then IMG="${REG}:15"; break; else sleep $((2*i)); fi
+            done
+            [ -n "$IMG" ] && break
+          done
+          if [ -z "$IMG" ]; then echo "Failed to pull Postgres image from all registries"; exit 1; fi
+          echo "POSTGRES_IMAGE=$IMG" >> $GITHUB_ENV
+          docker run -d --name postgres-ci -p 5432:5432 \
+            -e POSTGRES_USER=user -e POSTGRES_PASSWORD=sintetica -e POSTGRES_DB=girardot "$IMG"
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -49,7 +44,7 @@ jobs:
           mypy --config-file mypy.ini app
       - name: Wait for Postgres
         run: |
-          until pg_isready -h localhost -p 5432 -U user; do sleep 1; done
+          until pg_isready -h 127.0.0.1 -p 5432 -U user; do sleep 1; done
       - name: Export DATABASE_URL
         run: |
           echo "DATABASE_URL=postgresql+psycopg://user:sintetica@localhost:5432/girardot" >> $GITHUB_ENV
@@ -59,3 +54,7 @@ jobs:
       - name: Run tests
         run: |
           pytest -q
+      - name: Stop Postgres container
+        if: always()
+        run: |
+          docker rm -f postgres-ci || true
