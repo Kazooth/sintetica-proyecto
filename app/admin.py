@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from sqladmin import Admin, ModelView
 
 from .db import SessionLocal, engine
+from sqlalchemy.exc import IntegrityError
 from .models import (
     City,
     Establishment,
@@ -39,6 +40,23 @@ class ResourceAdmin(ModelView, model=Resource):
         Resource.slot_minutes,
         Resource.is_active,
     ]
+
+    # Si el recurso tiene reservas asociadas, el borrado físico viola FK.
+    # Sobrescribimos el delete para hacer 'soft delete' (is_active = False) si hay FK.
+    async def delete_model(self, request: Request, pk: int) -> None:  # type: ignore[override]
+        with SessionLocal() as s:
+            obj = s.get(Resource, pk)
+            if obj is None:
+                return
+            try:
+                s.delete(obj)
+                s.commit()
+            except IntegrityError:
+                s.rollback()
+                # Soft delete como fallback
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
 
 
 class OpeningHourAdmin(ModelView, model=OpeningHour):
@@ -151,6 +169,22 @@ class ProductAdmin(ModelView, model=Product):
         Product.is_active,
     ]
     column_searchable_list: ClassVar[Sequence] = [Product.name]
+
+    # Productos con ventas/inventario referenciándolos no pueden borrarse físicamente.
+    # Hacemos soft delete si el DELETE choca con FK.
+    async def delete_model(self, request: Request, pk: int) -> None:  # type: ignore[override]
+        with SessionLocal() as s:
+            obj = s.get(Product, pk)
+            if obj is None:
+                return
+            try:
+                s.delete(obj)
+                s.commit()
+            except IntegrityError:
+                s.rollback()
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
 
 
 class ProductCategoryAdmin(ModelView, model=ProductCategory):
