@@ -86,6 +86,61 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 
 Nota: En `app/main.py` fijamos `--host 127.0.0.1` para desarrollo local seguro (regla Ruff S104).
 
+## Paginación y cabeceras
+
+`GET /products` soporta paginación vía `limit` y `offset`. La respuesta incluye la cabecera `X-Total-Count` con el total de elementos sin paginar.
+
+Ejemplo:
+
+```powershell
+Invoke-WebRequest -Uri "http://127.0.0.1:8000/products?limit=10&offset=0" -Headers @{ Authorization = "Bearer <TOKEN>" } | Select-Object -ExpandProperty RawContent
+```
+
+- Lee `X-Total-Count` para saber cuántas páginas hay en total.
+
+## Reportes
+
+### Resumen de ventas por día
+
+Endpoint: `GET /reports/sales/summary?date_from=...&date_to=...`
+
+Parámetros aceptan fechas ISO 8601 con zona (`YYYY-MM-DDTHH:MM:SS+00:00`). Ejemplo en PowerShell:
+
+```powershell
+$from = (Get-Date).AddDays(-7).ToString("s") + "+00:00"
+$to = (Get-Date).AddDays(1).ToString("s") + "+00:00"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/reports/sales/summary?date_from=$from&date_to=$to" -Headers @{ Authorization = "Bearer <TOKEN>" }
+```
+
+Respuesta (ejemplo):
+
+```json
+[
+  {"day": "2025-10-20T00:00:00+00:00", "subtotal": 400, "tax_total": 76, "grand_total": 476, "count": 2}
+]
+```
+
+### Utilización de recursos
+
+Endpoint: `GET /reports/resources/utilization?date_from=...&date_to=...`
+
+Devuelve minutos reservados por recurso confirmado en el rango.
+
+## Roles y acceso (RBAC)
+
+- Muchos endpoints requieren roles: `ADMIN`, `OWNER`, `STAFF` o `CUSTOMER`.
+- Los reportes requieren `ADMIN`/`OWNER` (y en algunos casos `STAFF`).
+- `POST /register` crea usuarios con rol `CUSTOMER`.
+
+Para promover un usuario a `ADMIN` rápido durante pruebas (SQL directo):
+
+```sql
+-- Reemplaza por el email creado durante el registro
+UPDATE users SET role = 'ADMIN' WHERE email = 'tu-email@example.com';
+```
+
+Luego inicia sesión con `/login` (OAuth2 password flow) para obtener el token y úsalo en la cabecera `Authorization: Bearer <TOKEN>`.
+
 ## Pruebas, Lint, Types
 
 - Lint (Ruff) y formato:
