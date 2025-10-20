@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15
+        # Use AWS ECR Public mirror to avoid transient Docker Hub 503 errors
+        image: public.ecr.aws/docker/library/postgres:15
         env:
           POSTGRES_USER: user
           POSTGRES_PASSWORD: sintetica
@@ -25,6 +26,10 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+      # Fallback: proactively pull mirror image with simple retry (non-blocking if service already started)
+      - name: Pre-pull Postgres image (retry)
+        run: |
+          for i in 1 2 3; do docker pull public.ecr.aws/docker/library/postgres:15 && break || sleep $((2*i)); done
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
