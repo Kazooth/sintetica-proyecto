@@ -188,7 +188,9 @@ class ReservationPayment(Base):
     amount: Mapped[int]
     method: Mapped[str]
     # TIMESTAMPTZ + default now()
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=sa.func.now()
+    )
     note: Mapped[str | None] = mapped_column(Text())
 
 
@@ -245,7 +247,9 @@ class InventoryTx(Base):
     reason: Mapped[str | None] = mapped_column(String(200))
     sale_item_id: Mapped[int | None]
     # TIMESTAMPTZ en SQL:
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=sa.func.now()
+    )
 
 
 class Sale(Base):
@@ -263,7 +267,9 @@ class Sale(Base):
     grand_total: Mapped[int]
     status: Mapped[str] = mapped_column(String(10), default="OK")
     # TIMESTAMPTZ en SQL:
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=sa.func.now()
+    )
 
 
 class SaleItem(Base):
