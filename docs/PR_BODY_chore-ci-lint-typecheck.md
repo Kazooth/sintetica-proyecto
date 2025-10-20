@@ -15,12 +15,17 @@ Este PR fortalece la calidad, pruebas e infraestructura local del backend. Inclu
   - `tests/test_auth_register_login.py`: registro (201) y login (200).
   - `tests/test_reservation_create_happy.py`: flujo feliz de creación y listado.
   - `tests/test_reservation_overlap.py`: validación determinista de solape (201 → 409).
+  - `tests/test_security_hash.py`: sanity de hashing/verificación (incluye caso >72 bytes).
+- Seguridad
+  - Pin de `bcrypt==3.2.2` para compatibilidad con `passlib==1.7.4` en CI.
+  - Contexto de hashing con fallback `bcrypt_sha256` para evitar el edge-case de 72 bytes.
 - Scripts y utilidades
   - `scripts/smoke.ps1` + `scripts/smoke.py`: ejecutan seed → register → login → reservar → listar, contra DB local.
   - `docker-compose.yml` con Postgres 15 y healthcheck.
 - Otros
   - Migración a Pydantic v2 en `app/schemas.py` (uso de `ConfigDict(from_attributes=True)`).
   - `app/config.py` ajustado para lectura de `.env`/variables y compatibilidad con MyPy (`TYPE_CHECKING`).
+  - `constraints.txt` para reproducibilidad de dependencias en CI/local (usado en workflow).
 
 ## Cómo probar
 
@@ -49,6 +54,7 @@ mypy --config-file mypy.ini app tests
 ## Notas
 
 - El warning de `passlib/bcrypt` puede aparecer en algunos entornos; no afecta el flujo.
+  - En CI se fijó `bcrypt==3.2.2` para asegurar estabilidad.
 - La API de desarrollo usa host `127.0.0.1` por seguridad (comentado en `app/main.py`).
 
 ## Checklist
