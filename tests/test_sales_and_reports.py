@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -13,7 +13,12 @@ client = TestClient(app)
 
 def make_headers(role: str = "ADMIN"):
     with SessionLocal() as s:
-        u = User(email=f"{role.lower()}+{uuid4().hex[:6]}@example.com", password_hash=hash_password("Pass123!"), person_id=1, role=role)
+        u = User(
+            email=f"{role.lower()}+{uuid4().hex[:6]}@example.com",
+            password_hash=hash_password("Pass123!"),
+            person_id=1,
+            role=role,
+        )
         s.add(u)
         s.commit()
         s.refresh(u)
@@ -31,7 +36,14 @@ def seed_product(establishment_id: int | None = None) -> tuple[int, int]:
         cat = ProductCategory(name=f"C{uuid4().hex[:4]}")
         s.add(cat)
         s.flush()
-        p = Product(establishment_id=establishment_id, category_id=cat.id, name=f"P{uuid4().hex[:4]}", price=100, tax_rate=0.19, is_active=True)
+        p = Product(
+            establishment_id=establishment_id,
+            category_id=cat.id,
+            name=f"P{uuid4().hex[:4]}",
+            price=100,
+            tax_rate=0.19,
+            is_active=True,
+        )
         s.add(p)
         s.commit()
         return establishment_id, p.id
@@ -55,9 +67,14 @@ def test_create_sale_happy_and_report_summary():
 
     # report in a range that captures NOW()
     now = datetime.now(UTC)
+    params = {
+        "date_from": (now - timedelta(days=1)).isoformat(),
+        "date_to": (now + timedelta(days=1)).isoformat(),
+    }
     r2 = client.get(
-        f"/reports/sales/summary?date_from={(now - timedelta(days=1)).isoformat()}&date_to={(now + timedelta(days=1)).isoformat()}",
+        "/reports/sales/summary",
         headers=headers,
+        params=params,
     )
     assert r2.status_code == 200, r2.text
     rows = r2.json()

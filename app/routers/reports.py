@@ -1,11 +1,11 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Reservation, Resource, Sale
+from ..models import Reservation, Resource
 from ..security import require_roles
 
 router = APIRouter()
@@ -21,26 +21,31 @@ def sales_summary(
     if date_to <= date_from:
         raise HTTPException(status_code=400, detail="date_to must be after date_from")
 
-    rows = (
-        db.query(
-            func.date_trunc("day", Sale.created_at).label("day"),
-            func.sum(Sale.subtotal).label("subtotal"),
-            func.sum(Sale.tax_total).label("tax_total"),
-            func.sum(Sale.grand_total).label("grand_total"),
-            func.count(Sale.id).label("count"),
-        )
-        .filter(Sale.created_at >= date_from, Sale.created_at < date_to)
-        .group_by(func.date_trunc("day", Sale.created_at))
-        .order_by(func.date_trunc("day", Sale.created_at))
-        .all()
-    )
+    # Use explicit SQL to avoid GROUP BY ambiguity across dialect/param styles
+    rows = db.execute(
+        text(
+            """
+            SELECT
+                date_trunc('day', sales.created_at) AS day,
+                sum(sales.subtotal) AS subtotal,
+                sum(sales.tax_total) AS tax_total,
+                sum(sales.grand_total) AS grand_total,
+                count(sales.id) AS count
+            FROM sales
+            WHERE sales.created_at >= :date_from AND sales.created_at < :date_to
+            GROUP BY 1
+            ORDER BY 1
+            """
+        ),
+        {"date_from": date_from, "date_to": date_to},
+    ).mappings().all()
     return [
         {
-            "day": r.day.isoformat(),
-            "subtotal": int(r.subtotal or 0),
-            "tax_total": int(r.tax_total or 0),
-            "grand_total": int(r.grand_total or 0),
-            "count": int(r.count or 0),
+            "day": r["day"].isoformat(),
+            "subtotal": int(r["subtotal"] or 0),
+            "tax_total": int(r["tax_total"] or 0),
+            "grand_total": int(r["grand_total"] or 0),
+            "count": int(r["count"] or 0),
         }
         for r in rows
     ]
