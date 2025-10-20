@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..models import Blackout, OpeningHour, Reservation, Resource, User
 from ..schemas import ReservationCreate, ReservationOut
-from ..security import get_current_user
+from ..security import get_current_user, require_roles
 
 router = APIRouter()
 
@@ -126,6 +126,9 @@ def cancel_reservation(
     r = db.get(Reservation, reservation_id)
     if not r:
         raise HTTPException(status_code=404, detail="Reservation not found")
+    # CLIENTE solo puede cancelar su propia reserva; STAFF/OWNER/ADMIN pueden cancelar cualquiera
+    if current_user.role == "CUSTOMER" and r.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     if r.status == "CANCELLED":
         return {"ok": True, "status": r.status}
     r.status = "CANCELLED"
@@ -139,7 +142,7 @@ def cancel_reservation(
 def delete_reservation(
     reservation_id: int = Path(..., gt=0),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles({"ADMIN", "OWNER"})),
 ):
     r = db.get(Reservation, reservation_id)
     if not r:

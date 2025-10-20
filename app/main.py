@@ -4,7 +4,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from .admin import init_admin
 from .config import settings
 from .db import ping_db
-from .routers import auth, blackouts, establishments, geo, products, reservations, resources, sales
+from .routers import (
+    auth,
+    blackouts,
+    establishments,
+    geo,
+    products,
+    reports,
+    reservations,
+    resources,
+    sales,
+)
 
 app = FastAPI(title="Sintética API")
 
@@ -24,6 +34,7 @@ app.include_router(reservations.router, prefix="/reservations", tags=["reservati
 app.include_router(products.router, prefix="/products", tags=["products"])
 app.include_router(sales.router, prefix="/sales", tags=["sales"])
 app.include_router(blackouts.router, prefix="/blackouts", tags=["blackouts"])
+app.include_router(reports.router, prefix="/reports", tags=["reports"])
 
 
 @app.get("/health")

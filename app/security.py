@@ -53,3 +53,25 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if not user:
         raise cred_exc
     return user
+
+
+def require_roles(allowed: set[str]):
+    """FastAPI dependency to enforce role-based access control.
+
+    Usage: add `Depends(require_roles({"ADMIN","OWNER"}))` to protected endpoints.
+    """
+
+    def _dep(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in allowed:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+        return current_user
+
+    return _dep
+
+
+def ensure_ownership_or_roles(owner_user_id: int, current_user: User, allowed: set[str]) -> None:
+    """Raise 403 if user is not owner and lacks any of the allowed roles."""
+    if current_user.id == owner_user_id:
+        return
+    if current_user.role not in allowed:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
