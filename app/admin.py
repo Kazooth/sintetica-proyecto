@@ -45,20 +45,34 @@ def _parse_pks(pks: Any) -> list[int]:
             except ValueError:
                 pass
 
-    if isinstance(pks, list | tuple):
-        for v in pks:
-            if isinstance(v, str) and "," in v:
-                for part in v.split(","):
-                    _add(part)
-            else:
-                _add(str(v))
-    else:
+    # If it's a string/bytes, treat as a single token or CSV
+    if isinstance(pks, str) or isinstance(pks, bytes):
+        s = pks.decode("utf-8") if isinstance(pks, bytes) else pks
+        if "," in s:
+            for part in s.split(","):
+                _add(part)
+        else:
+            _add(s)
+        return result
+
+    # Otherwise, try to iterate; if not iterable, fallback to str()
+    try:
+        iterator = iter(pks)
+    except TypeError:
         s = str(pks)
         if "," in s:
             for part in s.split(","):
                 _add(part)
         else:
             _add(s)
+        return result
+    else:
+        for v in iterator:
+            if isinstance(v, str) and "," in v:
+                for part in v.split(","):
+                    _add(part)
+            else:
+                _add(str(v))
     return result
 
 
