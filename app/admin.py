@@ -37,56 +37,77 @@ class EstablishmentAdmin(ModelView, model=Establishment):
             obj = s.get(Establishment, pk)
             if obj is None:
                 return
-                # Si está activo, primero desactivar para seguridad
-                if getattr(obj, "is_active", True):
-                    obj.is_active = False
-                    s.add(obj)
-                    s.commit()
-                    return
-                # Si ya está inactivo, intentamos eliminar; si falla por FK, lo dejamos inactivo
+            # Si está activo, primero desactivar para seguridad
+            if getattr(obj, "is_active", True):
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
+                return
+            # Si ya está inactivo, intentamos eliminar; si falla por FK, lo dejamos inactivo
+            try:
+                s.delete(obj)
+                s.commit()
+            except IntegrityError:
+                s.rollback()
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
+
+    @action("activate", "Activar", "¿Activar los establecimientos seleccionados?")
+    def action_activate(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            s.execute(
+                sa.update(Establishment).where(Establishment.id.in_(ids)).values(is_active=True)
+            )
+            s.commit()
+
+    @action("deactivate", "Desactivar", "¿Desactivar los establecimientos seleccionados?")
+    def action_deactivate(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            s.execute(
+                sa.update(Establishment).where(Establishment.id.in_(ids)).values(is_active=False)
+            )
+            s.commit()
+
+    @action(
+        "purge_inactive",
+        "Eliminar inactivos (selección)",
+        "¿Eliminar físicamente los establecimientos INACTIVOS seleccionados?",
+    )
+    def action_purge_inactive(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            for _id in ids:
+                obj = s.get(Establishment, _id)
+                if obj is None or getattr(obj, "is_active", True):
+                    continue
                 try:
                     s.delete(obj)
                     s.commit()
                 except IntegrityError:
                     s.rollback()
-                    obj.is_active = False
-                    s.add(obj)
+
+    @action(
+        "purge_all_inactive",
+        "Eliminar TODOS los inactivos",
+        "¿Eliminar físicamente TODOS los establecimientos inactivos? Esta acción intentará eliminar uno por uno y omitirá los que tengan referencias.",
+    )
+    def action_purge_all_inactive(self, ids: list[int]) -> None:  # ids ignorados
+        with SessionLocal() as s:
+            inactive_ids = [
+                row[0]
+                for row in s.execute(
+                    sa.select(Establishment.id).where(Establishment.is_active.is_(False))
+                )
+            ]
+            for _id in inactive_ids:
+                obj = s.get(Establishment, _id)
+                if obj is None:
+                    continue
+                try:
+                    s.delete(obj)
                     s.commit()
-
-        @action("activate", "Activar", "¿Activar los establecimientos seleccionados?")
-        def action_activate(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                s.execute(
-                    sa.update(Establishment).where(Establishment.id.in_(ids)).values(is_active=True)
-                )
-                s.commit()
-
-        @action("deactivate", "Desactivar", "¿Desactivar los establecimientos seleccionados?")
-        def action_deactivate(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                s.execute(
-                    sa.update(Establishment)
-                    .where(Establishment.id.in_(ids))
-                    .values(is_active=False)
-                )
-                s.commit()
-
-        @action(
-            "purge_inactive",
-            "Eliminar inactivos",
-            "¿Eliminar físicamente los establecimientos INACTIVOS seleccionados?",
-        )
-        def action_purge_inactive(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                for _id in ids:
-                    obj = s.get(Establishment, _id)
-                    if obj is None or getattr(obj, "is_active", True):
-                        continue
-                    try:
-                        s.delete(obj)
-                        s.commit()
-                    except IntegrityError:
-                        s.rollback()
+                except IntegrityError:
+                    s.rollback()
 
 
 class ResourceAdmin(ModelView, model=Resource):
@@ -110,44 +131,65 @@ class ResourceAdmin(ModelView, model=Resource):
             obj = s.get(Resource, pk)
             if obj is None:
                 return
-                # Si está activo, primero desactivar (soft) y salir
-                if getattr(obj, "is_active", True):
-                    obj.is_active = False
-                    s.add(obj)
-                    s.commit()
-                    return
-                # Si ya está inactivo, intentamos eliminar
+            # Si está activo, primero desactivar (soft) y salir
+            if getattr(obj, "is_active", True):
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
+                return
+            # Si ya está inactivo, intentamos eliminar
+            try:
+                s.delete(obj)
+                s.commit()
+            except IntegrityError:
+                s.rollback()
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
+
+    @action("activate", "Activar", "¿Activar los recursos seleccionados?")
+    def action_activate(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            s.execute(sa.update(Resource).where(Resource.id.in_(ids)).values(is_active=True))
+            s.commit()
+
+    @action(
+        "purge_inactive",
+        "Eliminar inactivos (selección)",
+        "¿Eliminar físicamente los recursos INACTIVOS seleccionados?",
+    )
+    def action_purge_inactive(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            for _id in ids:
+                obj = s.get(Resource, _id)
+                if obj is None or getattr(obj, "is_active", True):
+                    continue
                 try:
                     s.delete(obj)
                     s.commit()
                 except IntegrityError:
                     s.rollback()
-                    obj.is_active = False
-                    s.add(obj)
+
+    @action(
+        "purge_all_inactive",
+        "Eliminar TODOS los inactivos",
+        "¿Eliminar físicamente TODOS los recursos inactivos? Esta acción intentará eliminar uno por uno y omitirá los que tengan referencias.",
+    )
+    def action_purge_all_inactive(self, ids: list[int]) -> None:  # ids ignorados
+        with SessionLocal() as s:
+            inactive_ids = [
+                row[0]
+                for row in s.execute(sa.select(Resource.id).where(Resource.is_active.is_(False)))
+            ]
+            for _id in inactive_ids:
+                obj = s.get(Resource, _id)
+                if obj is None:
+                    continue
+                try:
+                    s.delete(obj)
                     s.commit()
-
-        @action("activate", "Activar", "¿Activar los recursos seleccionados?")
-        def action_activate(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                s.execute(sa.update(Resource).where(Resource.id.in_(ids)).values(is_active=True))
-                s.commit()
-
-        @action(
-            "purge_inactive",
-            "Eliminar inactivos",
-            "¿Eliminar físicamente los recursos INACTIVOS seleccionados?",
-        )
-        def action_purge_inactive(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                for _id in ids:
-                    obj = s.get(Resource, _id)
-                    if obj is None or getattr(obj, "is_active", True):
-                        continue
-                    try:
-                        s.delete(obj)
-                        s.commit()
-                    except IntegrityError:
-                        s.rollback()
+                except IntegrityError:
+                    s.rollback()
 
     # Acción de admin para desactivar (soft-delete) uno o varios recursos
     @action("deactivate", "Desactivar", "¿Desactivar los recursos seleccionados?")
@@ -276,48 +318,69 @@ class ProductAdmin(ModelView, model=Product):
             obj = s.get(Product, pk)
             if obj is None:
                 return
-                if getattr(obj, "is_active", True):
-                    obj.is_active = False
-                    s.add(obj)
-                    s.commit()
-                    return
+            if getattr(obj, "is_active", True):
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
+                return
+            try:
+                s.delete(obj)
+                s.commit()
+            except IntegrityError:
+                s.rollback()
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
+
+    @action("activate", "Activar", "¿Activar los productos seleccionados?")
+    def action_activate(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            s.execute(sa.update(Product).where(Product.id.in_(ids)).values(is_active=True))
+            s.commit()
+
+    @action("deactivate", "Desactivar", "¿Desactivar los productos seleccionados?")
+    def action_deactivate(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            s.execute(sa.update(Product).where(Product.id.in_(ids)).values(is_active=False))
+            s.commit()
+
+    @action(
+        "purge_inactive",
+        "Eliminar inactivos (selección)",
+        "¿Eliminar físicamente los productos INACTIVOS seleccionados?",
+    )
+    def action_purge_inactive(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            for _id in ids:
+                obj = s.get(Product, _id)
+                if obj is None or getattr(obj, "is_active", True):
+                    continue
                 try:
                     s.delete(obj)
                     s.commit()
                 except IntegrityError:
                     s.rollback()
-                    obj.is_active = False
-                    s.add(obj)
+
+    @action(
+        "purge_all_inactive",
+        "Eliminar TODOS los inactivos",
+        "¿Eliminar físicamente TODOS los productos inactivos? Esta acción intentará eliminar uno por uno y omitirá los que tengan referencias.",
+    )
+    def action_purge_all_inactive(self, ids: list[int]) -> None:  # ids ignorados
+        with SessionLocal() as s:
+            inactive_ids = [
+                row[0]
+                for row in s.execute(sa.select(Product.id).where(Product.is_active.is_(False)))
+            ]
+            for _id in inactive_ids:
+                obj = s.get(Product, _id)
+                if obj is None:
+                    continue
+                try:
+                    s.delete(obj)
                     s.commit()
-
-        @action("activate", "Activar", "¿Activar los productos seleccionados?")
-        def action_activate(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                s.execute(sa.update(Product).where(Product.id.in_(ids)).values(is_active=True))
-                s.commit()
-
-        @action("deactivate", "Desactivar", "¿Desactivar los productos seleccionados?")
-        def action_deactivate(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                s.execute(sa.update(Product).where(Product.id.in_(ids)).values(is_active=False))
-                s.commit()
-
-        @action(
-            "purge_inactive",
-            "Eliminar inactivos",
-            "¿Eliminar físicamente los productos INACTIVOS seleccionados?",
-        )
-        def action_purge_inactive(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                for _id in ids:
-                    obj = s.get(Product, _id)
-                    if obj is None or getattr(obj, "is_active", True):
-                        continue
-                    try:
-                        s.delete(obj)
-                        s.commit()
-                    except IntegrityError:
-                        s.rollback()
+                except IntegrityError:
+                    s.rollback()
 
 
 class ProductCategoryAdmin(ModelView, model=ProductCategory):
@@ -333,56 +396,77 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
             obj = s.get(ProductCategory, pk)
             if obj is None:
                 return
-                if getattr(obj, "is_active", True):
-                    obj.is_active = False
-                    s.add(obj)
-                    s.commit()
-                    return
+            if getattr(obj, "is_active", True):
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
+                return
+            try:
+                s.delete(obj)
+                s.commit()
+            except IntegrityError:
+                s.rollback()
+                obj.is_active = False
+                s.add(obj)
+                s.commit()
+
+    @action("activate", "Activar", "¿Activar las categorías seleccionadas?")
+    def action_activate(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            s.execute(
+                sa.update(ProductCategory).where(ProductCategory.id.in_(ids)).values(is_active=True)
+            )
+            s.commit()
+
+    @action("deactivate", "Desactivar", "¿Desactivar las categorías seleccionadas?")
+    def action_deactivate(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            s.execute(
+                sa.update(ProductCategory)
+                .where(ProductCategory.id.in_(ids))
+                .values(is_active=False)
+            )
+            s.commit()
+
+    @action(
+        "purge_inactive",
+        "Eliminar inactivos (selección)",
+        "¿Eliminar físicamente las categorías INACTIVAS seleccionadas?",
+    )
+    def action_purge_inactive(self, ids: list[int]) -> None:
+        with SessionLocal() as s:
+            for _id in ids:
+                obj = s.get(ProductCategory, _id)
+                if obj is None or getattr(obj, "is_active", True):
+                    continue
                 try:
                     s.delete(obj)
                     s.commit()
                 except IntegrityError:
                     s.rollback()
-                    obj.is_active = False
-                    s.add(obj)
+
+    @action(
+        "purge_all_inactive",
+        "Eliminar TODOS los inactivos",
+        "¿Eliminar físicamente TODAS las categorías inactivas? Esta acción intentará eliminar uno por uno y omitirá los que tengan referencias.",
+    )
+    def action_purge_all_inactive(self, ids: list[int]) -> None:  # ids ignorados
+        with SessionLocal() as s:
+            inactive_ids = [
+                row[0]
+                for row in s.execute(
+                    sa.select(ProductCategory.id).where(ProductCategory.is_active.is_(False))
+                )
+            ]
+            for _id in inactive_ids:
+                obj = s.get(ProductCategory, _id)
+                if obj is None:
+                    continue
+                try:
+                    s.delete(obj)
                     s.commit()
-
-        @action("activate", "Activar", "¿Activar las categorías seleccionadas?")
-        def action_activate(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                s.execute(
-                    sa.update(ProductCategory)
-                    .where(ProductCategory.id.in_(ids))
-                    .values(is_active=True)
-                )
-                s.commit()
-
-        @action("deactivate", "Desactivar", "¿Desactivar las categorías seleccionadas?")
-        def action_deactivate(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                s.execute(
-                    sa.update(ProductCategory)
-                    .where(ProductCategory.id.in_(ids))
-                    .values(is_active=False)
-                )
-                s.commit()
-
-        @action(
-            "purge_inactive",
-            "Eliminar inactivos",
-            "¿Eliminar físicamente las categorías INACTIVAS seleccionadas?",
-        )
-        def action_purge_inactive(self, ids: list[int]) -> None:
-            with SessionLocal() as s:
-                for _id in ids:
-                    obj = s.get(ProductCategory, _id)
-                    if obj is None or getattr(obj, "is_active", True):
-                        continue
-                    try:
-                        s.delete(obj)
-                        s.commit()
-                    except IntegrityError:
-                        s.rollback()
+                except IntegrityError:
+                    s.rollback()
 
 
 class SaleAdmin(ModelView, model=Sale):
