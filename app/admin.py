@@ -3,6 +3,38 @@ from typing import Any, ClassVar
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
+
+# Robust parser for ids coming from admin actions (can be list or comma-separated string)
+def _parse_pks(pks: Any) -> list[int]:
+    if pks is None:
+        return []
+    result: list[int] = []
+
+    def _add(tok: str) -> None:
+        tok = tok.strip()
+        if tok:
+            try:
+                result.append(int(tok))
+            except ValueError:
+                pass
+
+    if isinstance(pks, (list, tuple)):
+        for v in pks:
+            if isinstance(v, str) and "," in v:
+                for part in v.split(","):
+                    _add(part)
+            else:
+                _add(str(v))
+    else:
+        s = str(pks)
+        if "," in s:
+            for part in s.split(","):
+                _add(part)
+        else:
+            _add(s)
+    return result
+
+
 from fastapi import FastAPI
 from sqladmin import Admin, ModelView, action
 
@@ -166,7 +198,7 @@ class EstablishmentAdmin(ModelView, model=Establishment):
 
     @action("activate", "Activar", "¿Activar los establecimientos seleccionados?")
     def action_activate(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             s.execute(
                 sa.update(Establishment).where(Establishment.id.in_(ids)).values(is_active=True)
@@ -176,7 +208,7 @@ class EstablishmentAdmin(ModelView, model=Establishment):
 
     @action("deactivate", "Desactivar", "¿Desactivar los establecimientos seleccionados?")
     def action_deactivate(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             s.execute(
                 sa.update(Establishment).where(Establishment.id.in_(ids)).values(is_active=False)
@@ -190,7 +222,7 @@ class EstablishmentAdmin(ModelView, model=Establishment):
         "¿Eliminar físicamente los establecimientos INACTIVOS seleccionados?",
     )
     def action_purge_inactive(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             for _id in ids:
                 obj = s.get(Establishment, _id)
@@ -270,7 +302,7 @@ class ResourceAdmin(ModelView, model=Resource):
 
     @action("activate", "Activar", "¿Activar los recursos seleccionados?")
     def action_activate(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             s.execute(sa.update(Resource).where(Resource.id.in_(ids)).values(is_active=True))
             s.commit()
@@ -282,7 +314,7 @@ class ResourceAdmin(ModelView, model=Resource):
         "¿Eliminar físicamente los recursos INACTIVOS seleccionados?",
     )
     def action_purge_inactive(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             for _id in ids:
                 obj = s.get(Resource, _id)
@@ -324,7 +356,7 @@ class ResourceAdmin(ModelView, model=Resource):
     # Acción de admin para desactivar (soft-delete) uno o varios recursos
     @action("deactivate", "Desactivar", "¿Desactivar los recursos seleccionados?")
     def action_deactivate(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             s.execute(sa.update(Resource).where(Resource.id.in_(ids)).values(is_active=False))
             s.commit()
@@ -465,7 +497,7 @@ class ProductAdmin(ModelView, model=Product):
 
     @action("activate", "Activar", "¿Activar los productos seleccionados?")
     def action_activate(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             s.execute(sa.update(Product).where(Product.id.in_(ids)).values(is_active=True))
             s.commit()
@@ -473,7 +505,7 @@ class ProductAdmin(ModelView, model=Product):
 
     @action("deactivate", "Desactivar", "¿Desactivar los productos seleccionados?")
     def action_deactivate(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             s.execute(sa.update(Product).where(Product.id.in_(ids)).values(is_active=False))
             s.commit()
@@ -485,7 +517,7 @@ class ProductAdmin(ModelView, model=Product):
         "¿Eliminar físicamente los productos INACTIVOS seleccionados?",
     )
     def action_purge_inactive(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             for _id in ids:
                 obj = s.get(Product, _id)
@@ -557,7 +589,7 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
 
     @action("activate", "Activar", "¿Activar las categorías seleccionadas?")
     def action_activate(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             s.execute(
                 sa.update(ProductCategory).where(ProductCategory.id.in_(ids)).values(is_active=True)
@@ -567,7 +599,7 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
 
     @action("deactivate", "Desactivar", "¿Desactivar las categorías seleccionadas?")
     def action_deactivate(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             s.execute(
                 sa.update(ProductCategory)
@@ -583,7 +615,7 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
         "¿Eliminar físicamente las categorías INACTIVAS seleccionadas?",
     )
     def action_purge_inactive(self, request: Request, pks: list[int]):
-        ids = [int(pk) for pk in (pks or [])]
+        ids = _parse_pks(pks)
         with SessionLocal() as s:
             for _id in ids:
                 obj = s.get(ProductCategory, _id)
