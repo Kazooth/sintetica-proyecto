@@ -3,38 +3,6 @@ from typing import Any, ClassVar
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
-
-# Robust parser for ids coming from admin actions (can be list or comma-separated string)
-def _parse_pks(pks: Any) -> list[int]:
-    if pks is None:
-        return []
-    result: list[int] = []
-
-    def _add(tok: str) -> None:
-        tok = tok.strip()
-        if tok:
-            try:
-                result.append(int(tok))
-            except ValueError:
-                pass
-
-    if isinstance(pks, (list, tuple)):
-        for v in pks:
-            if isinstance(v, str) and "," in v:
-                for part in v.split(","):
-                    _add(part)
-            else:
-                _add(str(v))
-    else:
-        s = str(pks)
-        if "," in s:
-            for part in s.split(","):
-                _add(part)
-        else:
-            _add(s)
-    return result
-
-
 from fastapi import FastAPI
 from sqladmin import Admin, ModelView, action
 
@@ -61,6 +29,37 @@ from .models import (
     State,
     User,
 )
+
+
+# Robust parser for ids coming from admin actions (can be list or comma-separated string)
+def _parse_pks(pks: Any) -> list[int]:
+    if pks is None:
+        return []
+    result: list[int] = []
+
+    def _add(tok: str) -> None:
+        tok = tok.strip()
+        if tok:
+            try:
+                result.append(int(tok))
+            except ValueError:
+                pass
+
+    if isinstance(pks, list | tuple):
+        for v in pks:
+            if isinstance(v, str) and "," in v:
+                for part in v.split(","):
+                    _add(part)
+            else:
+                _add(str(v))
+    else:
+        s = str(pks)
+        if "," in s:
+            for part in s.split(","):
+                _add(part)
+        else:
+            _add(s)
+    return result
 
 
 # ---- Helper functions for force purge with manual cascade deletes ----
