@@ -22,6 +22,7 @@ from .models import (
     Product,
     ProductCategory,
     Reservation,
+    ReservationPayment,
     Resource,
     Sale,
     SaleItem,
@@ -45,7 +46,22 @@ def _force_delete_product(session: sa.orm.Session, product_id: int) -> None:
 
 def _force_delete_resource(session: sa.orm.Session, resource_id: int) -> None:
     # Delete dependents of resource
-    session.execute(sa.delete(Reservation).where(Reservation.resource_id == resource_id))
+    resv_ids = [
+        r[0]
+        for r in session.execute(
+            sa.select(Reservation.id).where(Reservation.resource_id == resource_id)
+        )
+    ]
+    if resv_ids:
+        # Null out sales referencing these reservations (in case FK isn't ON DELETE SET NULL)
+        session.execute(
+            sa.update(Sale).where(Sale.reservation_id.in_(resv_ids)).values(reservation_id=None)
+        )
+        # Delete reservation payments first
+        session.execute(
+            sa.delete(ReservationPayment).where(ReservationPayment.reservation_id.in_(resv_ids))
+        )
+        session.execute(sa.delete(Reservation).where(Reservation.id.in_(resv_ids)))
     session.execute(sa.delete(Blackout).where(Blackout.resource_id == resource_id))
     session.execute(sa.delete(PricingRule).where(PricingRule.resource_id == resource_id))
     # Finally delete resource
@@ -76,9 +92,25 @@ def _force_delete_establishment(session: sa.orm.Session, est_id: int) -> None:
 
     # Delete resource-related dependents then resources
     if resource_ids:
+        # Handle reservations by these resources
+        resv_ids = [
+            r[0]
+            for r in session.execute(
+                sa.select(Reservation.id).where(Reservation.resource_id.in_(resource_ids))
+            )
+        ]
+        if resv_ids:
+            # Null out sales referencing these reservations
+            session.execute(
+                sa.update(Sale).where(Sale.reservation_id.in_(resv_ids)).values(reservation_id=None)
+            )
+            # Delete reservation payments then reservations
+            session.execute(
+                sa.delete(ReservationPayment).where(ReservationPayment.reservation_id.in_(resv_ids))
+            )
+            session.execute(sa.delete(Reservation).where(Reservation.id.in_(resv_ids)))
         session.execute(sa.delete(PricingRule).where(PricingRule.resource_id.in_(resource_ids)))
         session.execute(sa.delete(Blackout).where(Blackout.resource_id.in_(resource_ids)))
-        session.execute(sa.delete(Reservation).where(Reservation.resource_id.in_(resource_ids)))
         session.execute(sa.delete(Resource).where(Resource.id.in_(resource_ids)))
 
     # Delete product-related dependents then products
