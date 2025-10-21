@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from typing import Any, ClassVar
 from starlette.requests import Request
+from starlette.responses import RedirectResponse
 
 from fastapi import FastAPI
 from sqladmin import Admin, ModelView, action
@@ -54,27 +55,32 @@ class EstablishmentAdmin(ModelView, model=Establishment):
                 s.commit()
 
     @action("activate", "Activar", "¿Activar los establecimientos seleccionados?")
-    def action_activate(self, ids: list[int]) -> None:
+    def action_activate(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             s.execute(
                 sa.update(Establishment).where(Establishment.id.in_(ids)).values(is_active=True)
             )
             s.commit()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action("deactivate", "Desactivar", "¿Desactivar los establecimientos seleccionados?")
-    def action_deactivate(self, ids: list[int]) -> None:
+    def action_deactivate(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             s.execute(
                 sa.update(Establishment).where(Establishment.id.in_(ids)).values(is_active=False)
             )
             s.commit()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
         "purge_inactive",
         "Eliminar inactivos (selección)",
         "¿Eliminar físicamente los establecimientos INACTIVOS seleccionados?",
     )
-    def action_purge_inactive(self, ids: list[int]) -> None:
+    def action_purge_inactive(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             for _id in ids:
                 obj = s.get(Establishment, _id)
@@ -85,13 +91,14 @@ class EstablishmentAdmin(ModelView, model=Establishment):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
         "purge_all_inactive",
         "Eliminar TODOS los inactivos",
         "¿Eliminar físicamente TODOS los establecimientos inactivos? Esta acción intentará eliminar uno por uno y omitirá los que tengan referencias.",
     )
-    def action_purge_all_inactive(self, ids: list[int]) -> None:  # ids ignorados
+    def action_purge_all_inactive(self, request: Request, pks: list[int]):  # pks ignorados
         with SessionLocal() as s:
             inactive_ids = [
                 row[0]
@@ -108,6 +115,7 @@ class EstablishmentAdmin(ModelView, model=Establishment):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
 
 class ResourceAdmin(ModelView, model=Resource):
@@ -148,17 +156,20 @@ class ResourceAdmin(ModelView, model=Resource):
                 s.commit()
 
     @action("activate", "Activar", "¿Activar los recursos seleccionados?")
-    def action_activate(self, ids: list[int]) -> None:
+    def action_activate(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             s.execute(sa.update(Resource).where(Resource.id.in_(ids)).values(is_active=True))
             s.commit()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
         "purge_inactive",
         "Eliminar inactivos (selección)",
         "¿Eliminar físicamente los recursos INACTIVOS seleccionados?",
     )
-    def action_purge_inactive(self, ids: list[int]) -> None:
+    def action_purge_inactive(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             for _id in ids:
                 obj = s.get(Resource, _id)
@@ -169,13 +180,14 @@ class ResourceAdmin(ModelView, model=Resource):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
         "purge_all_inactive",
         "Eliminar TODOS los inactivos",
         "¿Eliminar físicamente TODOS los recursos inactivos? Esta acción intentará eliminar uno por uno y omitirá los que tengan referencias.",
     )
-    def action_purge_all_inactive(self, ids: list[int]) -> None:  # ids ignorados
+    def action_purge_all_inactive(self, request: Request, pks: list[int]):  # pks ignorados
         with SessionLocal() as s:
             inactive_ids = [
                 row[0]
@@ -190,13 +202,16 @@ class ResourceAdmin(ModelView, model=Resource):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     # Acción de admin para desactivar (soft-delete) uno o varios recursos
     @action("deactivate", "Desactivar", "¿Desactivar los recursos seleccionados?")
-    def action_deactivate(self, ids: list[int]) -> None:
+    def action_deactivate(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             s.execute(sa.update(Resource).where(Resource.id.in_(ids)).values(is_active=False))
             s.commit()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
 
 class OpeningHourAdmin(ModelView, model=OpeningHour):
@@ -333,23 +348,28 @@ class ProductAdmin(ModelView, model=Product):
                 s.commit()
 
     @action("activate", "Activar", "¿Activar los productos seleccionados?")
-    def action_activate(self, ids: list[int]) -> None:
+    def action_activate(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             s.execute(sa.update(Product).where(Product.id.in_(ids)).values(is_active=True))
             s.commit()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action("deactivate", "Desactivar", "¿Desactivar los productos seleccionados?")
-    def action_deactivate(self, ids: list[int]) -> None:
+    def action_deactivate(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             s.execute(sa.update(Product).where(Product.id.in_(ids)).values(is_active=False))
             s.commit()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
         "purge_inactive",
         "Eliminar inactivos (selección)",
         "¿Eliminar físicamente los productos INACTIVOS seleccionados?",
     )
-    def action_purge_inactive(self, ids: list[int]) -> None:
+    def action_purge_inactive(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             for _id in ids:
                 obj = s.get(Product, _id)
@@ -360,13 +380,14 @@ class ProductAdmin(ModelView, model=Product):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
         "purge_all_inactive",
         "Eliminar TODOS los inactivos",
         "¿Eliminar físicamente TODOS los productos inactivos? Esta acción intentará eliminar uno por uno y omitirá los que tengan referencias.",
     )
-    def action_purge_all_inactive(self, ids: list[int]) -> None:  # ids ignorados
+    def action_purge_all_inactive(self, request: Request, pks: list[int]):  # pks ignorados
         with SessionLocal() as s:
             inactive_ids = [
                 row[0]
@@ -381,6 +402,7 @@ class ProductAdmin(ModelView, model=Product):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
 
 class ProductCategoryAdmin(ModelView, model=ProductCategory):
@@ -411,15 +433,18 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
                 s.commit()
 
     @action("activate", "Activar", "¿Activar las categorías seleccionadas?")
-    def action_activate(self, ids: list[int]) -> None:
+    def action_activate(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             s.execute(
                 sa.update(ProductCategory).where(ProductCategory.id.in_(ids)).values(is_active=True)
             )
             s.commit()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action("deactivate", "Desactivar", "¿Desactivar las categorías seleccionadas?")
-    def action_deactivate(self, ids: list[int]) -> None:
+    def action_deactivate(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             s.execute(
                 sa.update(ProductCategory)
@@ -427,13 +452,15 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
                 .values(is_active=False)
             )
             s.commit()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
         "purge_inactive",
         "Eliminar inactivos (selección)",
         "¿Eliminar físicamente las categorías INACTIVAS seleccionadas?",
     )
-    def action_purge_inactive(self, ids: list[int]) -> None:
+    def action_purge_inactive(self, request: Request, pks: list[int]):
+        ids = [int(pk) for pk in (pks or [])]
         with SessionLocal() as s:
             for _id in ids:
                 obj = s.get(ProductCategory, _id)
@@ -444,13 +471,14 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
         "purge_all_inactive",
         "Eliminar TODOS los inactivos",
         "¿Eliminar físicamente TODAS las categorías inactivas? Esta acción intentará eliminar uno por uno y omitirá los que tengan referencias.",
     )
-    def action_purge_all_inactive(self, ids: list[int]) -> None:  # ids ignorados
+    def action_purge_all_inactive(self, request: Request, pks: list[int]):  # pks ignorados
         with SessionLocal() as s:
             inactive_ids = [
                 row[0]
@@ -467,6 +495,7 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+        return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
 
 class SaleAdmin(ModelView, model=Sale):
