@@ -12,7 +12,13 @@ from sqlalchemy.exc import IntegrityError
 from .models import (
     City,
     Establishment,
+    EstablishmentStaff,
     OpeningHour,
+    Blackout,
+    PricingRule,
+    Event,
+    InventoryStock,
+    InventoryTx,
     Product,
     ProductCategory,
     Reservation,
@@ -22,6 +28,78 @@ from .models import (
     State,
     User,
 )
+
+
+# ---- Helper functions for force purge with manual cascade deletes ----
+def _force_delete_product(session: sa.orm.Session, product_id: int) -> None:
+    # Remove stock movements and stock rows
+    session.execute(sa.delete(InventoryTx).where(InventoryTx.product_id == product_id))
+    session.execute(sa.delete(InventoryStock).where(InventoryStock.product_id == product_id))
+    # Remove sale items that reference this product
+    session.execute(sa.delete(SaleItem).where(SaleItem.product_id == product_id))
+    # Finally delete product
+    prod = session.get(Product, product_id)
+    if prod is not None:
+        session.delete(prod)
+
+
+def _force_delete_resource(session: sa.orm.Session, resource_id: int) -> None:
+    # Delete dependents of resource
+    session.execute(sa.delete(Reservation).where(Reservation.resource_id == resource_id))
+    session.execute(sa.delete(Blackout).where(Blackout.resource_id == resource_id))
+    session.execute(sa.delete(PricingRule).where(PricingRule.resource_id == resource_id))
+    # Finally delete resource
+    res = session.get(Resource, resource_id)
+    if res is not None:
+        session.delete(res)
+
+
+def _force_delete_establishment(session: sa.orm.Session, est_id: int) -> None:
+    # First, gather related IDs
+    resource_ids = [
+        r[0]
+        for r in session.execute(sa.select(Resource.id).where(Resource.establishment_id == est_id))
+    ]
+    product_ids = [
+        p[0]
+        for p in session.execute(sa.select(Product.id).where(Product.establishment_id == est_id))
+    ]
+
+    # Delete child entities that depend on establishment directly
+    session.execute(sa.delete(OpeningHour).where(OpeningHour.establishment_id == est_id))
+    session.execute(sa.delete(Event).where(Event.establishment_id == est_id))
+    session.execute(sa.delete(PricingRule).where(PricingRule.establishment_id == est_id))
+    session.execute(sa.delete(Blackout).where(Blackout.establishment_id == est_id))
+    session.execute(
+        sa.delete(EstablishmentStaff).where(EstablishmentStaff.establishment_id == est_id)
+    )
+
+    # Delete resource-related dependents then resources
+    if resource_ids:
+        session.execute(sa.delete(PricingRule).where(PricingRule.resource_id.in_(resource_ids)))
+        session.execute(sa.delete(Blackout).where(Blackout.resource_id.in_(resource_ids)))
+        session.execute(sa.delete(Reservation).where(Reservation.resource_id.in_(resource_ids)))
+        session.execute(sa.delete(Resource).where(Resource.id.in_(resource_ids)))
+
+    # Delete product-related dependents then products
+    if product_ids:
+        session.execute(sa.delete(InventoryTx).where(InventoryTx.product_id.in_(product_ids)))
+        session.execute(sa.delete(InventoryStock).where(InventoryStock.product_id.in_(product_ids)))
+        session.execute(sa.delete(SaleItem).where(SaleItem.product_id.in_(product_ids)))
+        session.execute(sa.delete(Product).where(Product.id.in_(product_ids)))
+
+    # Delete sales (and any remaining sale items by sale_id just in case)
+    sale_ids = [
+        s[0] for s in session.execute(sa.select(Sale.id).where(Sale.establishment_id == est_id))
+    ]
+    if sale_ids:
+        session.execute(sa.delete(SaleItem).where(SaleItem.sale_id.in_(sale_ids)))
+        session.execute(sa.delete(Sale).where(Sale.id.in_(sale_ids)))
+
+    # Finally delete establishment
+    est = session.get(Establishment, est_id)
+    if est is not None:
+        session.delete(est)
 
 
 class EstablishmentAdmin(ModelView, model=Establishment):
@@ -50,8 +128,8 @@ class EstablishmentAdmin(ModelView, model=Establishment):
                 s.commit()
             except IntegrityError:
                 s.rollback()
-                obj.is_active = False
-                s.add(obj)
+                # Fuerza cascada manual para admin
+                _force_delete_establishment(s, pk)
                 s.commit()
 
     @action("activate", "Activar", "¿Activar los establecimientos seleccionados?")
@@ -91,6 +169,8 @@ class EstablishmentAdmin(ModelView, model=Establishment):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+                    _force_delete_establishment(s, _id)
+                    s.commit()
         return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
@@ -115,6 +195,8 @@ class EstablishmentAdmin(ModelView, model=Establishment):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+                    _force_delete_establishment(s, _id)
+                    s.commit()
         return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
 
@@ -151,8 +233,7 @@ class ResourceAdmin(ModelView, model=Resource):
                 s.commit()
             except IntegrityError:
                 s.rollback()
-                obj.is_active = False
-                s.add(obj)
+                _force_delete_resource(s, pk)
                 s.commit()
 
     @action("activate", "Activar", "¿Activar los recursos seleccionados?")
@@ -180,6 +261,8 @@ class ResourceAdmin(ModelView, model=Resource):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+                    _force_delete_resource(s, _id)
+                    s.commit()
         return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
@@ -202,6 +285,8 @@ class ResourceAdmin(ModelView, model=Resource):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+                    _force_delete_resource(s, _id)
+                    s.commit()
         return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     # Acción de admin para desactivar (soft-delete) uno o varios recursos
@@ -343,8 +428,7 @@ class ProductAdmin(ModelView, model=Product):
                 s.commit()
             except IntegrityError:
                 s.rollback()
-                obj.is_active = False
-                s.add(obj)
+                _force_delete_product(s, pk)
                 s.commit()
 
     @action("activate", "Activar", "¿Activar los productos seleccionados?")
@@ -380,6 +464,8 @@ class ProductAdmin(ModelView, model=Product):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+                    _force_delete_product(s, _id)
+                    s.commit()
         return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
@@ -402,6 +488,8 @@ class ProductAdmin(ModelView, model=Product):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+                    _force_delete_product(s, _id)
+                    s.commit()
         return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
 
@@ -428,8 +516,11 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
                 s.commit()
             except IntegrityError:
                 s.rollback()
-                obj.is_active = False
-                s.add(obj)
+                # Primero desasociar productos de la categoría
+                s.execute(
+                    sa.update(Product).where(Product.category_id == pk).values(category_id=None)
+                )
+                s.delete(obj)
                 s.commit()
 
     @action("activate", "Activar", "¿Activar las categorías seleccionadas?")
@@ -471,6 +562,13 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+                    s.execute(
+                        sa.update(Product)
+                        .where(Product.category_id == _id)
+                        .values(category_id=None)
+                    )
+                    s.delete(obj)
+                    s.commit()
         return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
     @action(
@@ -495,6 +593,13 @@ class ProductCategoryAdmin(ModelView, model=ProductCategory):
                     s.commit()
                 except IntegrityError:
                     s.rollback()
+                    s.execute(
+                        sa.update(Product)
+                        .where(Product.category_id == _id)
+                        .values(category_id=None)
+                    )
+                    s.delete(obj)
+                    s.commit()
         return RedirectResponse(request.headers.get("referer", "/admin/"), status_code=303)
 
 
